@@ -23,7 +23,13 @@ jobs:
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r27c
-          local-cache: true
+          local-cache: false
+
+      - name: Sanity-check NDK clang exists
+        run: |
+          set -eu
+          ls -la "${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/" | head -20
+          "${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/clang" --version
 
       - name: Configure runtime/ against the NDK toolchain (aarch64)
         run: |
@@ -45,3 +51,4 @@ jobs:
           path: |
             build/android-arm64/CMakeFiles/CMakeError.log
             build/android-arm64/CMakeFiles/CMakeOutput.log
+            
