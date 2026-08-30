@@ -52,4 +52,45 @@ jobs:
           path: |
             build/android-arm64/CMakeFiles/CMakeError.log
             build/android-arm64/CMakeFiles/CMakeOutput.log
-            
+
+  abi-proof-ndk:
+    name: statefree_regcall_sret_proof (aarch64, NDK, no game data)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Android NDK
+        id: ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27c
+          local-cache: false
+
+      # This fixture (translator/tests/fixtures/statefree_regcall_sret_proof.cpp) is
+      # synthetic ABI-stress-test C++ from the translator's own test suite - no game
+      # code or assets involved. __declspec(noinline) is MSVC/clang-cl-only, so a
+      # portable shim header is injected ahead of it for the NDK's plain Clang target,
+      # rather than editing the committed fixture.
+      - name: Install qemu-user for running the cross-compiled aarch64 binary
+        run: sudo apt-get update && sudo apt-get install -y qemu-user
+
+      - name: Compile the ABI proof fixture for aarch64-linux-android
+        run: |
+          set -eu
+          clang="${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-clang++"
+          cat > declspec_shim.h <<'EOF'
+          #pragma once
+          #if !defined(_WIN64)
+          #define __declspec(x) __attribute__((x))
+          #endif
+          EOF
+          "$clang" -std=c++17 -O2 -static \
+            -include declspec_shim.h \
+            -o abi_proof \
+            translator/tests/fixtures/statefree_regcall_sret_proof.cpp
+          file abi_proof
+
+      - name: Run the ABI proof fixture under qemu-aarch64
+        run: qemu-aarch64 ./abi_proof
