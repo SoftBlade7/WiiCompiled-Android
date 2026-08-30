@@ -31,6 +31,11 @@ jobs:
           ls -la "${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/" | head -20
           "${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/clang" --version
 
+      - name: Manually Download and Extract Dawn SDK for Android
+        run: |
+          mkdir -p ${{ github.workspace }}/dawn-sdk
+          curl -L "https://github.com" | tar -xz -C ${{ github.workspace }}/dawn-sdk
+
       - name: Configure runtime/ against the NDK toolchain (aarch64)
         run: |
           set -eu
@@ -40,8 +45,8 @@ jobs:
             -DANDROID_PLATFORM=android-29 \
             -DCMAKE_BUILD_TYPE=Release \
             -DAURORA_DAWN_PROVIDER=package \
-            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/build/android-arm64/_deps" \
-            -DDawn_DIR="${{ github.workspace }}/build/android-arm64/_deps/dawn/lib/cmake/Dawn"
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/dawn-sdk"
+
 
       - name: Build runtime/ (aarch64)
         run: cmake --build build/android-arm64 --config Release
