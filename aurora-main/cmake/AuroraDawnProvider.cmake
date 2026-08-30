@@ -176,6 +176,14 @@ elseif (_aurora_dawn_provider STREQUAL "package")
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
   )
   FetchContent_MakeAvailable(dawn_prebuilt)
+  message(STATUS "DEBUG: dawn_prebuilt_SOURCE_DIR=${dawn_prebuilt_SOURCE_DIR}")
+  file(GLOB _dawn_debug_toplevel LIST_DIRECTORIES TRUE "${dawn_prebuilt_SOURCE_DIR}/*")
+  message(STATUS "DEBUG: top-level contents: ${_dawn_debug_toplevel}")
+  if (EXISTS "${dawn_prebuilt_SOURCE_DIR}/lib/cmake/Dawn/DawnConfig.cmake")
+    message(STATUS "DEBUG: DawnConfig.cmake found at expected path")
+  else ()
+    message(STATUS "DEBUG: DawnConfig.cmake NOT found at ${dawn_prebuilt_SOURCE_DIR}/lib/cmake/Dawn/DawnConfig.cmake")
+  endif ()
 
   # Detect package layout: may be nested in a subdirectory
   set(_dawn_pkg_dir "${dawn_prebuilt_SOURCE_DIR}")
