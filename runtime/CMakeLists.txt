@@ -1,8 +1,9 @@
 ﻿cmake_minimum_required(VERSION 3.16)
 project(mkw_recompiled)
 
-if((NOT (WIN32 AND MINGW)) AND (NOT CMAKE_SYSTEM_NAME STREQUAL "Linux"))
-    message(FATAL_ERROR "WiiCompiled requires Windows (LLVM-MinGW) or native Linux")
+if((NOT (WIN32 AND MINGW)) AND (NOT CMAKE_SYSTEM_NAME STREQUAL "Linux") AND
+   (NOT CMAKE_SYSTEM_NAME STREQUAL "Android"))
+    message(FATAL_ERROR "WiiCompiled requires Windows (LLVM-MinGW), native Linux, or Android")
 endif()
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR
    NOT CMAKE_SIZEOF_VOID_P EQUAL 8 OR
