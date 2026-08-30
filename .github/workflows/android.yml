@@ -1,4 +1,4 @@
-name: Android NDK build (validation)
+name: Android NDK build (Direct Translation)
 
 on:
   push:
@@ -8,16 +8,23 @@ on:
 
 jobs:
   runtime-ndk-configure:
-    name: runtime/ configure+build (aarch64, NDK)
+    name: runtime/ translate+configure+build (aarch64)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-          submodules: recursive
+          submodules: recursive # Fetches dawn and internal submodules automatically
 
-      - name: Install Ninja
-        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Install Ninja & Build Utilities
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+      - name: Set up .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0' # Required to run the Translator utility
 
       - name: Set up Android NDK
         id: ndk
@@ -26,24 +33,22 @@ jobs:
           ndk-version: r27c
           local-cache: false
 
+      # Place your extraction assets/ROM into your repository at 'orig/' or pull via script
+      - name: Build Translator and Emit Real Build Shards
+        run: |
+          set -eu
+          # 1. Build the translation utility
+          dotnet build translator/Translator.sln -c Release
+          
+          # 2. Execute translation directly to generate the exact shards.cmake file
+          # Ensure your ROM or extracted main.dol/StaticR.rel files exist where the CLI expects them
+          dotnet run --project translator/Translator.Cli -- emit-build-shards
+
       - name: Configure runtime/ against the NDK toolchain (aarch64)
         run: |
           set -eu
-          
-          # Recreate the generated shards folder structure
-          mkdir -p generated/build_shards
-
-          # Inject a mock compilation unit definition to satisfy lines 140+ of PublicProducts.cmake
-          cat > generated/build_shards/shards.cmake <<'EOF'
-          set(WIICOMPILED_BASE_SHARDS "mock_shard")
-          add_library(mock_shard OBJECT)
-          target_compile_definitions(mock_shard PRIVATE MOCK_STUB=1)
-          EOF
-          
-          # Wipe cached directories to eliminate any sticky parameters
           rm -rf build/android-arm64
 
-          # Configure the target with exact flags
           cmake -S runtime -B build/android-arm64 -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE="${{ steps.ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake" \
             -DANDROID_ABI=arm64-v8a \
@@ -96,7 +101,6 @@ jobs:
           #endif
           EOF
           
-          # Compile dynamically while adapting dynamic link paths for the target layout
           "$clang" -std=c++17 -O2 \
             -include declspec_shim.h \
             -static-libstdc++ \
@@ -104,7 +108,6 @@ jobs:
             -o abi_proof \
             translator/tests/fixtures/statefree_regcall_sret_proof.cpp
           
-          # Fix the layout so QEMU can locate native Android loader binaries inside sysroot
           mkdir -p "$sysroot/system/bin"
           ln -s "$sysroot/usr/lib/aarch64-linux-android/29/linker64" "$sysroot/system/bin/linker64"
 
@@ -112,7 +115,4 @@ jobs:
         run: |
           set -eu
           sysroot="${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
-          
-          # Pass systemic library environment overrides directly to QEMU-user
           QEMU_LD_PREFIX="$sysroot" qemu-aarch64 ./abi_proof
-          
