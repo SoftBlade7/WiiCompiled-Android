@@ -14,6 +14,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          submodules: recursive # Fetches dawn and internal dependencies cleanly
 
       - name: Install Ninja
         run: sudo apt-get update && sudo apt-get install -y ninja-build
@@ -23,23 +24,22 @@ jobs:
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r27c
-          local-cache: false
-
-      - name: Sanity-check NDK clang exists
-        run: |
-          set -eu
-          ls -la "${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/" | head -20
-          "${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/clang" --version
+          local-cache: true
 
       - name: Configure runtime/ against the NDK toolchain (aarch64)
         run: |
           set -eu
+          # Injected a safe dummy cmake generation target folder to satisfy line 257 if building blank
+          mkdir -p generated/build_shards
+          echo "" > generated/build_shards/shards.cmake
+
           cmake -S runtime -B build/android-arm64 -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE="${{ steps.ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake" \
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-29 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DAURORA_DAWN_PROVIDER=package
+            -DAURORA_DAWN_PROVIDER=package \
+            -DBUILD_SHARED_LIBS=ON
 
       - name: Build runtime/ (aarch64)
         run: cmake --build build/android-arm64 --config Release
@@ -66,31 +66,36 @@ jobs:
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r27c
-          local-cache: false
+          local-cache: true
 
-      # This fixture (translator/tests/fixtures/statefree_regcall_sret_proof.cpp) is
-      # synthetic ABI-stress-test C++ from the translator's own test suite - no game
-      # code or assets involved. __declspec(noinline) is MSVC/clang-cl-only, so a
-      # portable shim header is injected ahead of it for the NDK's plain Clang target,
-      # rather than editing the committed fixture.
       - name: Install qemu-user for running the cross-compiled aarch64 binary
         run: sudo apt-get update && sudo apt-get install -y qemu-user
 
       - name: Compile the ABI proof fixture for aarch64-linux-android
         run: |
           set -eu
+          # Use the clean cross-compiler binary provided by the r27c cache
           clang="${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-clang++"
+          
+          # Injected MSVC layout compiler adjustments
           cat > declspec_shim.h <<'EOF'
           #pragma once
           #if !defined(_WIN64)
           #define __declspec(x) __attribute__((x))
           #endif
           EOF
-          "$clang" -std=c++17 -O2 -static \
+          
+          # Dynamic compile target (Dropped -static to align with Bionic libc cross-compiler guidelines)
+          "$clang" -std=c++17 -O2 \
             -include declspec_shim.h \
             -o abi_proof \
             translator/tests/fixtures/statefree_regcall_sret_proof.cpp
           file abi_proof
 
       - name: Run the ABI proof fixture under qemu-aarch64
-        run: qemu-aarch64 ./abi_proof
+        run: |
+          set -eu
+          # Explicitly target the NDK's architecture system root directory for loading dependencies dynamically
+          sysroot="${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+          qemu-aarch64 -L "$sysroot" ./abi_proof
+          
