@@ -205,6 +205,7 @@ elseif (_aurora_dawn_provider STREQUAL "package")
   find_package(Threads QUIET)
 
   # Find DawnConfig.cmake in the package
+  message(STATUS "DEBUG: _dawn_pkg_dir=${_dawn_pkg_dir}")
   set(_dawn_cmake_found FALSE)
   foreach (_cmake_path
     "${_dawn_pkg_dir}/lib/cmake/Dawn"
