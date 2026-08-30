@@ -37,12 +37,12 @@ jobs:
       - name: Build Translator and Emit Real Build Shards
         run: |
           set -eu
-          # 1. Build the translation utility
           dotnet build translator/Translator.sln -c Release
           
-          # 2. Execute translation directly to generate the exact shards.cmake file
-          # Ensure your ROM or extracted main.dol/StaticR.rel files exist where the CLI expects them
-          dotnet run --project translator/Translator.Cli -- emit-build-shards
+          # Change context directory and run locally
+          cd translator/src/Translator.Cli/
+          dotnet run -c Release -- emit-build-shards
+          
 
       - name: Configure runtime/ against the NDK toolchain (aarch64)
         run: |
