@@ -40,6 +40,42 @@ jobs:
           fi
           echo "Found generated/build_shards/shards.cmake - proceeding with a real runtime build."
 
+      # Translator.Cli always writes shards.cmake with the emitting machine's
+      # absolute paths baked in (see CMakePath() in TranslatedBuildShardEmitter.cs) -
+      # it has no relative-path mode. Rewrite the Windows prefix from local
+      # translation to this runner's actual checkout path before configuring.
+      - name: Rewrite absolute paths in shards.cmake for this runner
+        run: |
+          set -eu
+          shards="generated/build_shards/shards.cmake"
+          before=$(grep -c "C:/Users/SoftBlade/Desktop/wiicompiled/compiled/BuildWorkspace/generated" "$shards" || true)
+          echo "Occurrences of the local Windows prefix before rewrite: $before"
+          sed -i "s#C:/Users/SoftBlade/Desktop/wiicompiled/compiled/BuildWorkspace/generated#${GITHUB_WORKSPACE}/generated#g" "$shards"
+          after=$(grep -c "C:/Users/SoftBlade/Desktop/wiicompiled/compiled/BuildWorkspace/generated" "$shards" || true)
+          echo "Occurrences remaining after rewrite: $after"
+          if [ "$after" -ne 0 ]; then
+            echo "::error::Rewrite left $after unmatched occurrences - check for other path variants in shards.cmake."
+            exit 1
+          fi
+
+      # Translator.Cli always writes shards.cmake with the emitting machine's
+      # absolute paths baked in (see CMakePath() in TranslatedBuildShardEmitter.cs) -
+      # it has no relative-path mode. Rewrite the Windows prefix from local
+      # translation to this runner's actual checkout path before configuring.
+      - name: Rewrite absolute paths in shards.cmake for this runner
+        run: |
+          set -eu
+          shards="generated/build_shards/shards.cmake"
+          before=$(grep -c "C:/Users/SoftBlade/Desktop/wiicompiled/compiled/BuildWorkspace/generated" "$shards" || true)
+          echo "Occurrences of the local Windows prefix before rewrite: $before"
+          sed -i "s#C:/Users/SoftBlade/Desktop/wiicompiled/compiled/BuildWorkspace/generated#${GITHUB_WORKSPACE}/generated#g" "$shards"
+          after=$(grep -c "C:/Users/SoftBlade/Desktop/wiicompiled/compiled/BuildWorkspace/generated" "$shards" || true)
+          echo "Occurrences remaining after rewrite: $after"
+          if [ "$after" -ne 0 ]; then
+            echo "::error::Rewrite left $after unmatched occurrences - check for other path variants in shards.cmake."
+            exit 1
+          fi
+
       - name: Configure runtime/ against the NDK toolchain (aarch64)
         run: |
           set -eu
