@@ -1,4 +1,4 @@
-name: Android NDK build (Direct Translation)
+name: Android NDK build (validation)
 
 on:
   push:
@@ -8,23 +8,15 @@ on:
 
 jobs:
   runtime-ndk-configure:
-    name: runtime/ translate+configure+build (aarch64)
+    name: runtime/ configure+build (aarch64, NDK)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-          submodules: recursive # Fetches dawn and internal submodules automatically
 
-      - name: Install Ninja & Build Utilities
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build
-
-      - name: Set up .NET 8 SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0' # Required to run the Translator utility
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
 
       - name: Set up Android NDK
         id: ndk
@@ -33,32 +25,43 @@ jobs:
           ndk-version: r27c
           local-cache: false
 
-      # Place your extraction assets/ROM into your repository at 'orig/' or pull via script
-      - name: Build Translator and Emit Real Build Shards
+      - name: Sanity-check NDK clang exists
         run: |
           set -eu
-          dotnet build translator/Translator.sln -c Release
-          
-          # Change context directory and run locally
-          cd translator/src/Translator.Cli/
-          dotnet run -c Release -- emit-build-shards
-          
+          ls -la "${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/" | head -20
+          "${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/clang" --version
+
+      - name: Check for translator-generated shard manifest
+        run: |
+          set -eu
+          if [ ! -f "generated/build_shards/shards.cmake" ]; then
+            echo "::error::generated/build_shards/shards.cmake is missing. Run Translator.Cli emit-build-shards locally against your own disc dump, then commit the generated/ output to this fork before this job can build the actual game runtime."
+            exit 1
+          fi
+          echo "Found generated/build_shards/shards.cmake - proceeding with a real runtime build."
 
       - name: Configure runtime/ against the NDK toolchain (aarch64)
         run: |
           set -eu
-          rm -rf build/android-arm64
-
           cmake -S runtime -B build/android-arm64 -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE="${{ steps.ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake" \
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-29 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DAURORA_DAWN_PROVIDER=package \
-            -DBUILD_SHARED_LIBS=ON
+            -DAURORA_DAWN_PROVIDER=package
 
       - name: Build runtime/ (aarch64)
         run: cmake --build build/android-arm64 --config Release
+
+      - name: Upload built runtime artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wiicompiled-android-arm64
+          path: |
+            build/android-arm64/*.so
+            build/android-arm64/**/*.so
+          if-no-files-found: warn
 
       - name: Upload configure/build logs on failure
         if: failure()
@@ -84,35 +87,29 @@ jobs:
           ndk-version: r27c
           local-cache: false
 
+      # This fixture (translator/tests/fixtures/statefree_regcall_sret_proof.cpp) is
+      # synthetic ABI-stress-test C++ from the translator's own test suite - no game
+      # code or assets involved. __declspec(noinline) is MSVC/clang-cl-only, so a
+      # portable shim header is injected ahead of it for the NDK's plain Clang target,
+      # rather than editing the committed fixture.
       - name: Install qemu-user for running the cross-compiled aarch64 binary
         run: sudo apt-get update && sudo apt-get install -y qemu-user
 
       - name: Compile the ABI proof fixture for aarch64-linux-android
         run: |
           set -eu
-          ndk_path="${{ steps.ndk.outputs.ndk-path }}"
-          clang="$ndk_path/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-clang++"
-          sysroot="$ndk_path/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
-          
+          clang="${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-clang++"
           cat > declspec_shim.h <<'EOF'
           #pragma once
           #if !defined(_WIN64)
           #define __declspec(x) __attribute__((x))
           #endif
           EOF
-          
-          "$clang" -std=c++17 -O2 \
+          "$clang" -std=c++17 -O2 -static \
             -include declspec_shim.h \
-            -static-libstdc++ \
-            -Wl,-dynamic-linker=/lib/ld-android.so \
             -o abi_proof \
             translator/tests/fixtures/statefree_regcall_sret_proof.cpp
-          
-          mkdir -p "$sysroot/system/bin"
-          ln -s "$sysroot/usr/lib/aarch64-linux-android/29/linker64" "$sysroot/system/bin/linker64"
+          file abi_proof
 
       - name: Run the ABI proof fixture under qemu-aarch64
-        run: |
-          set -eu
-          sysroot="${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
-          QEMU_LD_PREFIX="$sysroot" qemu-aarch64 ./abi_proof
+        run: qemu-aarch64 ./abi_proof
