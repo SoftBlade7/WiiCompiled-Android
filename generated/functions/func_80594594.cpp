@@ -1,0 +1,93 @@
+#include <cstdint>
+#include "ppc_runtime.h"
+#include "abi_bridge.h"
+#include "memory.h"
+#include "recomp_mod_loader.h"
+
+extern "C" void func_80594594(CpuContext* MKW_RESTRICT ctx)
+{
+    uint8_t* guest_range_0 = nullptr;
+
+    uint32_t r0 = ctx->gpr[0];
+    uint32_t r3 = ctx->gpr[3];
+    uint32_t r4 = ctx->gpr[4];
+    uint32_t r5 = ctx->gpr[5];
+    uint32_t r6 = ctx->gpr[6];
+    PPC_FPR f0 = ctx->fpr[0];
+    PPC_FPR f1 = ctx->fpr[1];
+    PPC_FPR f2 = ctx->fpr[2];
+
+    goto loc_80594594;
+
+loc_80594594:
+{
+    r4 = 0x80890000u;
+    r6 = 0;
+    f0.d = MemoryInline::FlatReadFloat32((r4 + 7920));
+    r0 = -1;
+    guest_range_0 = MemoryInline::ResolveRangeHost((r3 + 4), 0, 176u, false, true);
+    MemoryInline::WriteResolved32(guest_range_0, 12u, (r3 + 16), r6);
+    r5 = 0x802A0000u;
+    r4 = (r5 + 16640);
+    if (!MemoryInline::WriteResolvedPair32(guest_range_0, 4u, ((static_cast<uint64_t>(static_cast<uint32_t>(r6)) << 32) | static_cast<uint32_t>(r6)))) {
+        MemoryInline::WriteResolved32(guest_range_0, 8u, (r3 + 12), r6);
+        MemoryInline::WriteResolved32(guest_range_0, 4u, (r3 + 8), r6);
+    }
+    MemoryInline::WriteResolved32(guest_range_0, 0u, (r3 + 4), r6);
+    MemoryInline::WriteResolved32(guest_range_0, 24u, (r3 + 28), r6);
+    MemoryInline::WriteResolvedFloat32(guest_range_0, 32u, (r3 + 36), f0.d);
+    if (!MemoryInline::WriteResolvedPair32(guest_range_0, 40u, ((static_cast<uint64_t>(PpcBitCastToU32Inline(static_cast<float>(f0.d))) << 32) | PpcBitCastToU32Inline(static_cast<float>(f0.d))))) {
+        MemoryInline::WriteResolvedFloat32(guest_range_0, 44u, (r3 + 48), f0.d);
+        MemoryInline::WriteResolvedFloat32(guest_range_0, 40u, (r3 + 44), f0.d);
+    }
+    MemoryInline::WriteResolvedFloat32(guest_range_0, 36u, (r3 + 40), f0.d);
+    if (!MemoryInline::WriteResolvedPair32(guest_range_0, 64u, ((static_cast<uint64_t>(PpcBitCastToU32Inline(static_cast<float>(f0.d))) << 32) | PpcBitCastToU32Inline(static_cast<float>(f0.d))))) {
+        MemoryInline::WriteResolvedFloat32(guest_range_0, 68u, (r3 + 72), f0.d);
+        MemoryInline::WriteResolvedFloat32(guest_range_0, 64u, (r3 + 68), f0.d);
+    }
+    MemoryInline::WriteResolvedFloat32(guest_range_0, 60u, (r3 + 64), f0.d);
+    if (!MemoryInline::WriteResolvedPair32(guest_range_0, 84u, ((static_cast<uint64_t>(static_cast<uint32_t>(r6)) << 32) | static_cast<uint32_t>(r6)))) {
+        MemoryInline::WriteResolved32(guest_range_0, 84u, (r3 + 88), r6);
+        MemoryInline::WriteResolved32(guest_range_0, 88u, (r3 + 92), r6);
+    }
+    if (!MemoryInline::WriteResolvedPair32(guest_range_0, 104u, ((static_cast<uint64_t>(static_cast<uint32_t>(r6)) << 32) | static_cast<uint32_t>(r6)))) {
+        MemoryInline::WriteResolved32(guest_range_0, 104u, (r3 + 108), r6);
+        MemoryInline::WriteResolved32(guest_range_0, 108u, (r3 + 112), r6);
+    }
+    if (!MemoryInline::WriteResolvedPair32(guest_range_0, 112u, ((static_cast<uint64_t>(static_cast<uint32_t>(r0)) << 32) | static_cast<uint32_t>(r0)))) {
+        MemoryInline::WriteResolved32(guest_range_0, 112u, (r3 + 116), r0);
+        MemoryInline::WriteResolved32(guest_range_0, 116u, (r3 + 120), r0);
+    }
+    MemoryInline::WriteResolved16(guest_range_0, 128u, (r3 + 132), static_cast<uint16_t>(r6));
+    MemoryInline::WriteResolvedFloat32(guest_range_0, 152u, (r3 + 156), f0.d);
+    if (!MemoryInline::WriteResolvedPair32(guest_range_0, 132u, ((static_cast<uint64_t>(PpcBitCastToU32Inline(static_cast<float>(f0.d))) << 32) | PpcBitCastToU32Inline(static_cast<float>(f0.d))))) {
+        MemoryInline::WriteResolvedFloat32(guest_range_0, 136u, (r3 + 140), f0.d);
+        MemoryInline::WriteResolvedFloat32(guest_range_0, 132u, (r3 + 136), f0.d);
+    }
+    MemoryInline::WriteResolved16(guest_range_0, 160u, (r3 + 164), static_cast<uint16_t>(r6));
+    f2.d = MemoryInline::FlatReadFloat32((r5 + 16640));
+    MemoryInline::WriteResolvedFloat32(guest_range_0, 164u, (r3 + 168), f2.d);
+    f1.d = MemoryInline::FlatReadFloat32((r4 + 4));
+    MemoryInline::WriteResolvedFloat32(guest_range_0, 168u, (r3 + 172), f1.d);
+    f0.d = MemoryInline::FlatReadFloat32((r4 + 8));
+    MemoryInline::WriteResolvedFloat32(guest_range_0, 172u, (r3 + 176), f0.d);
+    if (!MemoryInline::WriteResolvedPair32(guest_range_0, 72u, ((static_cast<uint64_t>(PpcBitCastToU32Inline(static_cast<float>(f2.d))) << 32) | PpcBitCastToU32Inline(static_cast<float>(f1.d))))) {
+        MemoryInline::WriteResolvedFloat32(guest_range_0, 72u, (r3 + 76), f2.d);
+        MemoryInline::WriteResolvedFloat32(guest_range_0, 76u, (r3 + 80), f1.d);
+    }
+    MemoryInline::WriteResolvedFloat32(guest_range_0, 80u, (r3 + 84), f0.d);
+    MemoryInline::WriteResolved16(guest_range_0, 162u, (r3 + 166), static_cast<uint16_t>(r6));
+    ctx->gpr[0] = r0;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[6] = r6;
+    ctx->fpr[0] = f0;
+    ctx->fpr[1] = f1;
+    ctx->fpr[2] = f2;
+    return;
+}
+
+}
+
+// RECOMP_GUEST_ABI gpr_read=0x00000008 gpr_write=0x00000071 gpr_return=0x00000010 fpr_read=0x00000000 fpr_write=0x00000007 fpr_return=0x00000002 cr_read=0x00 cr_write=0x00 xer_read=0 xer_write=0 fence=0
+// RECOMP_REGISTRATION base 0x80594594 func_80594594 preserves=true fpr_mask=0x00000000

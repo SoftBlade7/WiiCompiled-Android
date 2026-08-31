@@ -1,0 +1,480 @@
+#include <cstdint>
+#include "ppc_runtime.h"
+#include "abi_bridge.h"
+#include "memory.h"
+#include "recomp_mod_loader.h"
+
+extern "C" void func_801BF134(CpuContext* MKW_RESTRICT ctx)
+{
+    uint32_t r0_rot_0 = 0;
+    uint32_t r3_addr_0 = 0;
+    uint32_t r3_addr_1 = 0;
+    uint32_t r4_addr_0 = 0;
+    uint32_t r4_addr_1 = 0;
+    uint8_t* guest_range_0 = nullptr;
+    uint8_t* guest_range_1 = nullptr;
+    uint8_t* guest_range_2 = nullptr;
+
+    uint32_t r0 = ctx->gpr[0];
+    uint32_t r1 = ctx->gpr[1];
+    uint32_t r3 = ctx->gpr[3];
+    uint32_t r4 = ctx->gpr[4];
+    uint32_t r5 = ctx->gpr[5];
+    uint32_t r11 = ctx->gpr[11];
+    uint32_t r13 = ctx->gpr[13];
+    uint32_t r26 = ctx->gpr[26];
+    uint32_t r27 = ctx->gpr[27];
+    uint32_t r28 = ctx->gpr[28];
+    uint32_t r29 = ctx->gpr[29];
+    uint32_t r30 = ctx->gpr[30];
+    uint32_t r31 = ctx->gpr[31];
+
+    goto loc_801BF134;
+
+loc_801BF134:
+{
+    guest_range_0 = MemoryInline::ResolveRangeHost((r1 + -32), 0, 40u, false, true);
+    MemoryInline::WriteResolved32(guest_range_0, 0u, (r1 + -32), r1);
+    r1 = (r1 + -32);
+    r0 = ctx->lr;
+    MemoryInline::WriteResolved32(guest_range_0, 36u, (r1 + 36), r0);
+    r11 = (r1 + 32);
+    // inline leaf 0x8002159C (7 guest instruction(s))
+    if (!MemoryInline::WriteResolvedPair32(guest_range_0, 8u, ((static_cast<uint64_t>(static_cast<uint32_t>(r26)) << 32) | static_cast<uint32_t>(r27)))) {
+        MemoryInline::WriteResolved32(guest_range_0, 8u, (r11 + -24), r26);
+        MemoryInline::WriteResolved32(guest_range_0, 12u, (r11 + -20), r27);
+    }
+    if (!MemoryInline::WriteResolvedPair32(guest_range_0, 16u, ((static_cast<uint64_t>(static_cast<uint32_t>(r28)) << 32) | static_cast<uint32_t>(r29)))) {
+        MemoryInline::WriteResolved32(guest_range_0, 16u, (r11 + -16), r28);
+        MemoryInline::WriteResolved32(guest_range_0, 20u, (r11 + -12), r29);
+    }
+    if (!MemoryInline::WriteResolvedPair32(guest_range_0, 24u, ((static_cast<uint64_t>(static_cast<uint32_t>(r30)) << 32) | static_cast<uint32_t>(r31)))) {
+        MemoryInline::WriteResolved32(guest_range_0, 24u, (r11 + -8), r30);
+        MemoryInline::WriteResolved32(guest_range_0, 28u, (r11 + -4), r31);
+    }
+    // end of inlined leaf 0x8002159C
+    r4 = 0x80350000u;
+    r0_rot_0 = PpcRotl32Inline(static_cast<uint32_t>(r3), static_cast<uint32_t>(2));
+    r0 = (r0_rot_0 & -4);
+    r4 = (r4 + 2352);
+    r27 = 0;
+    r4_addr_0 = (r4 + r0);
+    r26 = MemoryInline::FlatRead32(r4_addr_0);
+    r28 = -1;
+    r29 = 253;
+    r30 = 12;
+    guest_range_1 = MemoryInline::ResolveRangeHost((r26 + 2128), 0, 196u, false, true);
+    MemoryInline::WriteResolved8(guest_range_1, 120u, (r26 + 2248), static_cast<uint8_t>(r27));
+    r31 = r3;
+    MemoryInline::WriteResolved32(guest_range_1, 0u, (r26 + 2128), r27);
+    MemoryInline::WriteResolved32(guest_range_1, 132u, (r26 + 2260), r27);
+    if (!MemoryInline::WriteResolvedPair32(guest_range_1, 76u, ((static_cast<uint64_t>(static_cast<uint32_t>(r27)) << 32) | static_cast<uint32_t>(r27)))) {
+        MemoryInline::WriteResolved32(guest_range_1, 76u, (r26 + 2204), r27);
+        MemoryInline::WriteResolved32(guest_range_1, 80u, (r26 + 2208), r27);
+    }
+    if (!MemoryInline::WriteResolvedPair32(guest_range_1, 88u, ((static_cast<uint64_t>(static_cast<uint32_t>(r27)) << 32) | static_cast<uint32_t>(r27)))) {
+        MemoryInline::WriteResolved32(guest_range_1, 88u, (r26 + 2216), r27);
+        MemoryInline::WriteResolved32(guest_range_1, 92u, (r26 + 2220), r27);
+    }
+    if (!MemoryInline::WriteResolvedPair32(guest_range_1, 96u, ((static_cast<uint64_t>(static_cast<uint32_t>(r27)) << 32) | static_cast<uint32_t>(r27)))) {
+        MemoryInline::WriteResolved32(guest_range_1, 96u, (r26 + 2224), r27);
+        MemoryInline::WriteResolved32(guest_range_1, 100u, (r26 + 2228), r27);
+    }
+    if (!MemoryInline::WriteResolvedPair32(guest_range_1, 104u, ((static_cast<uint64_t>(static_cast<uint32_t>(r27)) << 32) | static_cast<uint32_t>(r28)))) {
+        MemoryInline::WriteResolved32(guest_range_1, 104u, (r26 + 2232), r27);
+        MemoryInline::WriteResolved32(guest_range_1, 108u, (r26 + 2236), r28);
+    }
+    MemoryInline::WriteResolved8(guest_range_1, 113u, (r26 + 2241), static_cast<uint8_t>(r29));
+    MemoryInline::WriteResolved8(guest_range_1, 114u, (r26 + 2242), static_cast<uint8_t>(r27));
+    MemoryInline::WriteResolved8(guest_range_1, 193u, (r26 + 2321), static_cast<uint8_t>(r27));
+    MemoryInline::WriteResolved16(guest_range_1, 194u, (r26 + 2322), static_cast<uint16_t>(r27));
+    MemoryInline::WriteResolved8(guest_range_1, 112u, (r26 + 2240), static_cast<uint8_t>(r27));
+    MemoryInline::WriteResolved8(guest_range_1, 122u, (r26 + 2250), static_cast<uint8_t>(r30));
+    MemoryInline::WriteResolved8(guest_range_1, 123u, (r26 + 2251), static_cast<uint8_t>(r27));
+    MemoryInline::WriteResolved8(guest_range_1, 124u, (r26 + 2252), static_cast<uint8_t>(r27));
+    if (!MemoryInline::WriteResolvedPair16(guest_range_1, 168u, ((static_cast<uint32_t>(static_cast<uint16_t>(r27)) << 16) | static_cast<uint16_t>(r27)))) {
+        MemoryInline::WriteResolved16(guest_range_1, 168u, (r26 + 2296), r27);
+        MemoryInline::WriteResolved16(guest_range_1, 170u, (r26 + 2298), r27);
+    }
+    if (!MemoryInline::WriteResolvedPair16(guest_range_1, 172u, ((static_cast<uint32_t>(static_cast<uint16_t>(r27)) << 16) | static_cast<uint16_t>(r27)))) {
+        MemoryInline::WriteResolved16(guest_range_1, 172u, (r26 + 2300), r27);
+        MemoryInline::WriteResolved16(guest_range_1, 174u, (r26 + 2302), r27);
+    }
+    if (!MemoryInline::WriteResolvedPair16(guest_range_1, 176u, ((static_cast<uint32_t>(static_cast<uint16_t>(r27)) << 16) | static_cast<uint16_t>(r27)))) {
+        MemoryInline::WriteResolved16(guest_range_1, 176u, (r26 + 2304), r27);
+        MemoryInline::WriteResolved16(guest_range_1, 178u, (r26 + 2306), r27);
+    }
+    ctx->lr = 0x801BF1D4u;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[11] = r11;
+    ctx->gpr[26] = r26;
+    ctx->gpr[27] = r27;
+    ctx->gpr[28] = r28;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    InvokeDirectCpu<0x801AAD7Cu>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r11 = ctx->gpr[11];
+    r13 = ctx->gpr[13];
+    r26 = ctx->gpr[26];
+    r27 = ctx->gpr[27];
+    r28 = ctx->gpr[28];
+    r29 = ctx->gpr[29];
+    r30 = ctx->gpr[30];
+    r31 = ctx->gpr[31];
+    MemoryInline::FlatWrite32((r26 + 2292), r4);
+    MemoryInline::FlatWrite32((r26 + 2288), r3);
+    ctx->lr = 0x801BF1E0u;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[11] = r11;
+    ctx->gpr[26] = r26;
+    ctx->gpr[27] = r27;
+    ctx->gpr[28] = r28;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    InvokeDirectCpu<0x801AAD7Cu>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r11 = ctx->gpr[11];
+    r13 = ctx->gpr[13];
+    r26 = ctx->gpr[26];
+    r27 = ctx->gpr[27];
+    r28 = ctx->gpr[28];
+    r29 = ctx->gpr[29];
+    r30 = ctx->gpr[30];
+    r31 = ctx->gpr[31];
+    guest_range_2 = MemoryInline::ResolveRangeHost((r26 + 2243), 0, 209u, false, true);
+    MemoryInline::WriteResolved32(guest_range_2, 73u, (r26 + 2316), r4);
+    r0 = 1;
+    r4 = 0;
+    r5 = 24;
+    MemoryInline::WriteResolved32(guest_range_2, 69u, (r26 + 2312), r3);
+    r3 = (r26 + 2104);
+    MemoryInline::WriteResolved8(guest_range_2, 77u, (r26 + 2320), static_cast<uint8_t>(r27));
+    MemoryInline::WriteResolved8(guest_range_2, 6u, (r26 + 2249), static_cast<uint8_t>(r27));
+    MemoryInline::WriteResolved32(guest_range_2, 1u, (r26 + 2244), r27);
+    if (!MemoryInline::WriteResolvedPair32(guest_range_2, 177u, ((static_cast<uint64_t>(static_cast<uint32_t>(r27)) << 32) | static_cast<uint32_t>(r27)))) {
+        MemoryInline::WriteResolved32(guest_range_2, 177u, (r26 + 2420), r27);
+        MemoryInline::WriteResolved32(guest_range_2, 181u, (r26 + 2424), r27);
+    }
+    MemoryInline::WriteResolved16(guest_range_2, 189u, (r26 + 2432), static_cast<uint16_t>(r27));
+    MemoryInline::WriteResolved32(guest_range_2, 185u, (r26 + 2428), r27);
+    MemoryInline::WriteResolved8(guest_range_2, 0u, (r26 + 2243), static_cast<uint8_t>(r28));
+    if (!MemoryInline::WriteResolvedPair32(guest_range_2, 21u, ((static_cast<uint64_t>(static_cast<uint32_t>(r27)) << 32) | static_cast<uint32_t>(r27)))) {
+        MemoryInline::WriteResolved32(guest_range_2, 21u, (r26 + 2264), r27);
+        MemoryInline::WriteResolved32(guest_range_2, 25u, (r26 + 2268), r27);
+    }
+    MemoryInline::WriteResolved32(guest_range_2, 29u, (r26 + 2272), r27);
+    MemoryInline::WriteResolved8(guest_range_2, 10u, (r26 + 2253), static_cast<uint8_t>(r0));
+    MemoryInline::WriteResolved8(guest_range_2, 11u, (r26 + 2254), static_cast<uint8_t>(r27));
+    MemoryInline::WriteResolved8(guest_range_2, 12u, (r26 + 2255), static_cast<uint8_t>(r27));
+    MemoryInline::WriteResolved8(guest_range_2, 191u, (r26 + 2434), static_cast<uint8_t>(r27));
+    MemoryInline::WriteResolved8(guest_range_2, 192u, (r26 + 2435), static_cast<uint8_t>(r27));
+    MemoryInline::WriteResolved16(guest_range_2, 193u, (r26 + 2436), static_cast<uint16_t>(r27));
+    MemoryInline::WriteResolved8(guest_range_2, 195u, (r26 + 2438), static_cast<uint8_t>(r0));
+    MemoryInline::WriteResolved8(guest_range_2, 201u, (r26 + 2444), static_cast<uint8_t>(r27));
+    MemoryInline::WriteResolved32(guest_range_2, 197u, (r26 + 2440), r27);
+    MemoryInline::WriteResolved8(guest_range_2, 203u, (r26 + 2446), static_cast<uint8_t>(r27));
+    MemoryInline::WriteResolved8(guest_range_2, 205u, (r26 + 2448), static_cast<uint8_t>(r29));
+    MemoryInline::WriteResolved8(guest_range_2, 206u, (r26 + 2449), static_cast<uint8_t>(r27));
+    MemoryInline::WriteResolved16(guest_range_2, 207u, (r26 + 2450), static_cast<uint16_t>(r27));
+    ctx->lr = 0x801BF25Cu;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[31] = r31;
+    InvokeDirectCpu<0x80006038u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r31 = ctx->gpr[31];
+    r3 = (r26 + 2356);
+    r4 = 0;
+    r5 = 64;
+    ctx->lr = 0x801BF26Cu;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[31] = r31;
+    InvokeDirectCpu<0x80006038u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r31 = ctx->gpr[31];
+    r3 = (r26 + 160);
+    r4 = 0;
+    r5 = 192;
+    ctx->lr = 0x801BF27Cu;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[31] = r31;
+    InvokeDirectCpu<0x80006038u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r31 = ctx->gpr[31];
+    r3 = (r26 + 64);
+    r4 = 0;
+    r5 = 96;
+    ctx->lr = 0x801BF28Cu;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[31] = r31;
+    InvokeDirectCpu<0x80006038u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r31 = ctx->gpr[31];
+    r3 = (r26 + 2132);
+    r4 = 0;
+    r5 = 46;
+    ctx->lr = 0x801BF29Cu;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[31] = r31;
+    InvokeDirectCpu<0x80006038u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r31 = ctx->gpr[31];
+    r3 = (r26 + 2178);
+    r4 = 0;
+    r5 = 26;
+    ctx->lr = 0x801BF2ACu;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[31] = r31;
+    InvokeDirectCpu<0x80006038u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r31 = ctx->gpr[31];
+    r3 = (r26 + 2324);
+    r4 = 0;
+    r5 = 16;
+    ctx->lr = 0x801BF2BCu;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[31] = r31;
+    InvokeDirectCpu<0x80006038u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r31 = ctx->gpr[31];
+    r3 = (r26 + 2340);
+    r4 = 0;
+    r5 = 8;
+    ctx->lr = 0x801BF2CCu;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[31] = r31;
+    InvokeDirectCpu<0x80006038u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r31 = ctx->gpr[31];
+    r3 = (r26 + 2348);
+    r4 = 0;
+    r5 = 8;
+    ctx->lr = 0x801BF2DCu;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[31] = r31;
+    InvokeDirectCpu<0x80006038u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r31 = ctx->gpr[31];
+    r3 = r26;
+    r4 = 0;
+    r5 = 56;
+    ctx->lr = 0x801BF2ECu;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[31] = r31;
+    InvokeDirectCpu<0x80006038u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r31 = ctx->gpr[31];
+    MemoryInline::FlatWrite32((r26 + 56), r28);
+    r4 = (r26 + 364);
+    r3 = 24;
+    r0 = (r26 + 1528);
+    MemoryInline::FlatWrite32((r26 + 60), r28);
+    MemoryInline::FlatWrite32((r26 + 356), r4);
+    MemoryInline::FlatWrite32((r26 + 360), r3);
+    MemoryInline::FlatWrite32((r26 + 1520), r0);
+    MemoryInline::FlatWrite32((r26 + 1524), r30);
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    InvokeDirectCpu<0x801A65ACu>(ctx);
+    r3 = ctx->gpr[3];
+    MemoryInline::FlatWrite8((r26 + 352), static_cast<uint8_t>(r27));
+    r28 = r3;
+    r4 = 0;
+    MemoryInline::FlatWrite8((r26 + 353), static_cast<uint8_t>(r27));
+    r0 = MemoryInline::FlatRead32((r26 + 360));
+    r3 = MemoryInline::FlatRead32((r26 + 356));
+    r5 = (r0 * 48);
+    ctx->lr = 0x801BF334u;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[31] = r31;
+    InvokeDirectCpu<0x80006038u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r31 = ctx->gpr[31];
+    r3 = r28;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    InvokeDirectCpu<0x801A65D4u>(ctx);
+    r3 = ctx->gpr[3];
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    InvokeDirectCpu<0x801A65ACu>(ctx);
+    r3 = ctx->gpr[3];
+    MemoryInline::FlatWrite8((r26 + 1516), static_cast<uint8_t>(r27));
+    r28 = r3;
+    r4 = 0;
+    MemoryInline::FlatWrite8((r26 + 1517), static_cast<uint8_t>(r27));
+    r0 = MemoryInline::FlatRead32((r26 + 1524));
+    r3 = MemoryInline::FlatRead32((r26 + 1520));
+    r5 = (r0 * 48);
+    ctx->lr = 0x801BF360u;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[31] = r31;
+    InvokeDirectCpu<0x80006038u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r31 = ctx->gpr[31];
+    r3 = r28;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    InvokeDirectCpu<0x801A65D4u>(ctx);
+    r3 = ctx->gpr[3];
+    r0 = (r31 * 20);
+    r4 = 0x80350000u;
+    r3 = (r13 + -24560);
+    r4 = (r4 + 16528);
+    r3_addr_0 = (r3 + r31);
+    MemoryInline::FlatWrite8(r3_addr_0, static_cast<uint8_t>(r27));
+    r3 = (r13 + -24556);
+    r4_addr_1 = (r4 + r0);
+    MemoryInline::FlatWrite32(r4_addr_1, r27);
+    r4 = (r4 + r0);
+    r11 = (r1 + 32);
+    MemoryInline::FlatWrite32((r4 + 4), r27);
+    MemoryInline::FlatWrite16((r4 + 8), static_cast<uint16_t>(r27));
+    MemoryInline::FlatWrite32((r4 + 12), r27);
+    MemoryInline::FlatWrite32((r4 + 16), r27);
+    r3_addr_1 = (r3 + r31);
+    MemoryInline::FlatWrite8(r3_addr_1, static_cast<uint8_t>(r27));
+    // inline leaf 0x800215E8 (7 guest instruction(s))
+    r26 = MemoryInline::FlatRead32((r11 + -24));
+    r27 = MemoryInline::FlatRead32((r11 + -20));
+    r28 = MemoryInline::FlatRead32((r11 + -16));
+    r29 = MemoryInline::FlatRead32((r11 + -12));
+    r30 = MemoryInline::FlatRead32((r11 + -8));
+    r31 = MemoryInline::FlatRead32((r11 + -4));
+    // end of inlined leaf 0x800215E8
+    r0 = MemoryInline::FlatRead32((r1 + 36));
+    ctx->lr = r0;
+    r1 = (r1 + 32);
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[11] = r11;
+    ctx->gpr[26] = r26;
+    ctx->gpr[27] = r27;
+    ctx->gpr[28] = r28;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    return;
+}
+
+}
+
+// RECOMP_GUEST_ABI gpr_read=0xFFFFF7EE gpr_write=0xFFFFFFFF gpr_return=0x00000018 fpr_read=0xFFFFFFFF fpr_write=0xFFFFFFFF fpr_return=0x00000002 cr_read=0xFF cr_write=0xFF xer_read=1 xer_write=1 fence=1
+// RECOMP_REGISTRATION base 0x801BF134 func_801BF134 preserves=true fpr_mask=0x00000000

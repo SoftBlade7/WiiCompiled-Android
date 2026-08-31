@@ -1,0 +1,254 @@
+#include <cstdint>
+#include "ppc_runtime.h"
+#include "abi_bridge.h"
+#include "memory.h"
+#include "recomp_mod_loader.h"
+
+extern "C" void func_8018673C(CpuContext* MKW_RESTRICT ctx)
+{
+    uint32_t cr0_0 = 0;
+    uint32_t r0_rot_0 = 0;
+    uint32_t r0_rot_1 = 0;
+    uint32_t r0_rot_2 = 0;
+    uint32_t r0_rot_3 = 0;
+    uint32_t r3_psq_tmp_0 = 0;
+    uint32_t r3_psq_tmp_1 = 0;
+    uint32_t r3_psq_tmp_2 = 0;
+    uint32_t r3_psq_tmp_3 = 0;
+    uint32_t r3_psq_tmp_4 = 0;
+    uint32_t r3_psq_tmp_5 = 0;
+    uint32_t r3_psq_tmp_6 = 0;
+    uint32_t r4_psq_tmp_0 = 0;
+    uint32_t r4_psq_tmp_1 = 0;
+    uint32_t r4_psq_tmp_2 = 0;
+    uint32_t r4_psq_tmp_3 = 0;
+    uint32_t r4_psq_tmp_4 = 0;
+    uint32_t r4_psq_tmp_5 = 0;
+    uint32_t r4_psq_tmp_6 = 0;
+
+    uint32_t r0 = ctx->gpr[0];
+    uint32_t r1 = ctx->gpr[1];
+    uint32_t r3 = ctx->gpr[3];
+    uint32_t r4 = ctx->gpr[4];
+    uint32_t r5 = ctx->gpr[5];
+    uint32_t r31 = ctx->gpr[31];
+    PPC_FPR f0 = ctx->fpr[0];
+    PPC_FPR f1 = ctx->fpr[1];
+    PPC_FPR f2 = ctx->fpr[2];
+    PPC_FPR f3 = ctx->fpr[3];
+    PPC_FPR f4 = ctx->fpr[4];
+    PPC_FPR f5 = ctx->fpr[5];
+    uint32_t cr = ctx->cr;
+    uint32_t xer = ctx->xer;
+
+    [[maybe_unused]] uint32_t mkw_gqr0 = ctx->gqr[0];
+
+    goto loc_8018673C;
+
+loc_8018673C:
+{
+    MemoryInline::FlatWriteRam32((r1 + -64), r1);
+    r1 = (r1 + -64);
+    r0 = ctx->lr;
+    r5 = r3;
+    MemoryInline::FlatWriteRam32((r1 + 68), r0);
+    r0 = MemoryInline::FlatRead8((r4 + 80));
+    MemoryInline::FlatWriteRam32((r1 + 60), r31);
+    r31 = r4;
+    r0_rot_0 = PpcRotl32Inline(static_cast<uint32_t>(r0), static_cast<uint32_t>(25));
+    r0 = (r0_rot_0 & 1);
+}
+
+loc_8018675C:
+{
+    if ((static_cast<int32_t>(r0) == static_cast<int32_t>(0))) {
+        goto loc_801867C0;
+    }
+}
+
+loc_80186760:
+{
+    r3 = (r4 + 4);
+    r4 = (r5 + 132);
+    r5 = (r1 + 8);
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->fpr[0] = f0;
+    ctx->fpr[1] = f1;
+    ctx->fpr[2] = f2;
+    ctx->fpr[3] = f3;
+    ctx->fpr[4] = f4;
+    ctx->fpr[5] = f5;
+    InvokeDirectCpu<0x80199D64u>(ctx);
+    r1 = ctx->gpr[1];
+    f0 = ctx->fpr[0];
+    f1 = ctx->fpr[1];
+    f2 = ctx->fpr[2];
+    f3 = ctx->fpr[3];
+    f4 = ctx->fpr[4];
+    f5 = ctx->fpr[5];
+    f2.d = MemoryInline::FlatReadFloat32((r31 + 64));
+    r3 = 0x80250000u;
+    f1.d = MemoryInline::FlatReadFloat32((r31 + 56));
+    f0.d = MemoryInline::FlatReadFloat32((r3 + 11096));
+    f1.d = static_cast<double>(PpcForceSingleValueInline(f2.d - f1.d));
+    SetCRFloatResident(cr, 0, f1.d, f0.d);
+}
+
+loc_80186788:
+{
+    r0 = cr;
+    r0_rot_1 = PpcRotl32Inline(static_cast<uint32_t>(r0), static_cast<uint32_t>(1));
+    r0 = (r0_rot_1 & 1);
+    SetCRResident(cr, xer, 0, static_cast<int32_t>(r0), static_cast<int32_t>(0));
+}
+
+loc_80186790:
+{
+    if (((cr & 0x20000000u) != 0)) {
+        goto loc_801867B8;
+    }
+}
+
+loc_80186794:
+{
+    f2.d = MemoryInline::FlatReadFloat32((r1 + 12));
+    f1.d = MemoryInline::FlatReadFloat32((r1 + 28));
+    f0.d = MemoryInline::FlatReadFloat32((r1 + 44));
+    f2.d = (-(f2.d));
+    f1.d = (-(f1.d));
+    f0.d = (-(f0.d));
+    MemoryInline::FlatWriteRamFloat32((r1 + 12), f2.d);
+    MemoryInline::FlatWriteRamFloat32((r1 + 28), f1.d);
+    MemoryInline::FlatWriteRamFloat32((r1 + 44), f0.d);
+}
+
+loc_801867B8:
+{
+    r3 = (r1 + 8);
+    goto loc_80186820;
+}
+
+loc_801867C0:
+{
+    f2.d = MemoryInline::FlatReadFloat32((r4 + 64));
+    r5 = 0x80250000u;
+    f1.d = MemoryInline::FlatReadFloat32((r4 + 56));
+    f0.d = MemoryInline::FlatReadFloat32((r5 + 11096));
+    f1.d = static_cast<double>(PpcForceSingleValueInline(f2.d - f1.d));
+    SetCRFloatResident(cr, 0, f1.d, f0.d);
+}
+
+loc_801867D8:
+{
+    r0 = cr;
+    r0_rot_2 = PpcRotl32Inline(static_cast<uint32_t>(r0), static_cast<uint32_t>(1));
+    r0 = (r0_rot_2 & 1);
+    SetCRResident(cr, xer, 0, static_cast<int32_t>(r0), static_cast<int32_t>(0));
+}
+
+loc_801867E0:
+{
+    if (((cr & 0x20000000u) != 0)) {
+        goto loc_8018681C;
+    }
+}
+
+loc_801867E4:
+{
+    r3 = (r3 + 132);
+    r4 = (r1 + 8);
+    // inline leaf 0x80199D30 (13 guest instruction(s))
+    // psq_load w=0 quant=0 (using PPC_PsqL)
+    PpcSetPairedFprInline(f0, PPC_PsqLGqrInline<0u, 0u>(ctx, mkw_gqr0, r3));
+    // psq_store w=0 quant=0 (using PPC_PsqSt)
+    PPC_PsqStStackInline<0u, 0u>(ctx, r4, f0.d);
+    // psq_load w=0 quant=0 (using PPC_PsqL)
+    r3_psq_tmp_1 = (r3 + 8);
+    PpcSetPairedFprInline(f1, PPC_PsqLGqrInline<0u, 0u>(ctx, mkw_gqr0, r3_psq_tmp_1));
+    // psq_store w=0 quant=0 (using PPC_PsqSt)
+    r4_psq_tmp_1 = (r4 + 8);
+    PPC_PsqStStackInline<0u, 0u>(ctx, r4_psq_tmp_1, f1.d);
+    // psq_load w=0 quant=0 (using PPC_PsqL)
+    r3_psq_tmp_2 = (r3 + 16);
+    PpcSetPairedFprInline(f2, PPC_PsqLGqrInline<0u, 0u>(ctx, mkw_gqr0, r3_psq_tmp_2));
+    // psq_store w=0 quant=0 (using PPC_PsqSt)
+    r4_psq_tmp_2 = (r4 + 16);
+    PPC_PsqStStackInline<0u, 0u>(ctx, r4_psq_tmp_2, f2.d);
+    // psq_load w=0 quant=0 (using PPC_PsqL)
+    r3_psq_tmp_3 = (r3 + 24);
+    PpcSetPairedFprInline(f3, PPC_PsqLGqrInline<0u, 0u>(ctx, mkw_gqr0, r3_psq_tmp_3));
+    // psq_store w=0 quant=0 (using PPC_PsqSt)
+    r4_psq_tmp_3 = (r4 + 24);
+    PPC_PsqStStackInline<0u, 0u>(ctx, r4_psq_tmp_3, f3.d);
+    // psq_load w=0 quant=0 (using PPC_PsqL)
+    r3_psq_tmp_4 = (r3 + 32);
+    PpcSetPairedFprInline(f4, PPC_PsqLGqrInline<0u, 0u>(ctx, mkw_gqr0, r3_psq_tmp_4));
+    // psq_store w=0 quant=0 (using PPC_PsqSt)
+    r4_psq_tmp_4 = (r4 + 32);
+    PPC_PsqStStackInline<0u, 0u>(ctx, r4_psq_tmp_4, f4.d);
+    // psq_load w=0 quant=0 (using PPC_PsqL)
+    r3_psq_tmp_5 = (r3 + 40);
+    PpcSetPairedFprInline(f5, PPC_PsqLGqrInline<0u, 0u>(ctx, mkw_gqr0, r3_psq_tmp_5));
+    // psq_store w=0 quant=0 (using PPC_PsqSt)
+    r4_psq_tmp_5 = (r4 + 40);
+    PPC_PsqStStackInline<0u, 0u>(ctx, r4_psq_tmp_5, f5.d);
+    // end of inlined leaf 0x80199D30
+    f2.d = MemoryInline::FlatReadFloat32((r1 + 12));
+    r3 = (r1 + 8);
+    f1.d = MemoryInline::FlatReadFloat32((r1 + 28));
+    f0.d = MemoryInline::FlatReadFloat32((r1 + 44));
+    f2.d = (-(f2.d));
+    f1.d = (-(f1.d));
+    f0.d = (-(f0.d));
+    MemoryInline::FlatWriteRamFloat32((r1 + 12), f2.d);
+    MemoryInline::FlatWriteRamFloat32((r1 + 28), f1.d);
+    MemoryInline::FlatWriteRamFloat32((r1 + 44), f0.d);
+    f3.d = PPC_PsToScalarInline(f3.d);
+    f4.d = PPC_PsToScalarInline(f4.d);
+    f5.d = PPC_PsToScalarInline(f5.d);
+    goto loc_80186820;
+}
+
+loc_8018681C:
+{
+    r3 = (r3 + 132);
+}
+
+loc_80186820:
+{
+    r4 = 0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    InvokeDirectCpu<0x8017310Cu>(ctx);
+    r3 = 0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    InvokeDirectCpu<0x80173214u>(ctx);
+    r0 = MemoryInline::FlatRead32((r1 + 68));
+    r31 = MemoryInline::FlatRead32((r1 + 60));
+    ctx->lr = r0;
+    r1 = (r1 + 64);
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[31] = r31;
+    ctx->fpr[0] = f0;
+    ctx->fpr[1] = f1;
+    ctx->fpr[2] = f2;
+    ctx->fpr[3] = f3;
+    ctx->fpr[4] = f4;
+    ctx->fpr[5] = f5;
+    ctx->cr = cr;
+    return;
+}
+
+}
+
+// RECOMP_GUEST_ABI gpr_read=0x8000003B gpr_write=0x8000007B gpr_return=0x00000018 fpr_read=0x8000C03F fpr_write=0x8000FFFF fpr_return=0x00000002 cr_read=0xFF cr_write=0x01 xer_read=1 xer_write=0 fence=0
+// RECOMP_REGISTRATION base 0x8018673C func_8018673C preserves=true fpr_mask=0x00000000

@@ -1,0 +1,300 @@
+#include <cstdint>
+#include "ppc_runtime.h"
+#include "abi_bridge.h"
+#include "memory.h"
+#include "recomp_mod_loader.h"
+
+extern "C" void func_80534684(CpuContext* MKW_RESTRICT ctx)
+{
+    uint32_t cr0_0 = 0;
+    uint32_t fctiwzword0 = 0;
+    uint32_t fctiwzword1 = 0;
+    uint32_t r0_ca_0 = 0;
+    uint32_t r0_ca_1 = 0;
+    uint32_t r0_not_0 = 0;
+    uint32_t r0_not_1 = 0;
+    uint32_t r0_subfc_sub_0 = 0;
+    uint32_t r1_psq_tmp_0 = 0;
+    uint32_t r29_ca_0 = 0;
+    uint32_t r29_ca_1 = 0;
+    uint32_t r29_ca_2 = 0;
+    uint32_t r29_not_0 = 0;
+    uint32_t r29_not_1 = 0;
+    uint32_t r29_not_2 = 0;
+    uint32_t r29_subfe_rb_0 = 0;
+    uint32_t r29_subfe_rb_1 = 0;
+    uint32_t r29_subfe_rb_2 = 0;
+    uint32_t r31_subfc_min_0 = 0;
+    uint32_t r31_subfc_min_1 = 0;
+    uint32_t r31_subfc_min_2 = 0;
+    uint32_t r3_ca_0 = 0;
+    uint32_t r3_ca_1 = 0;
+    uint32_t r3_ca_2 = 0;
+    uint32_t r3_not_0 = 0;
+    uint32_t r3_not_1 = 0;
+    uint32_t r3_not_2 = 0;
+
+    uint32_t r0 = ctx->gpr[0];
+    uint32_t r1 = ctx->gpr[1];
+    uint32_t r3 = ctx->gpr[3];
+    uint32_t r4 = ctx->gpr[4];
+    uint32_t r5 = ctx->gpr[5];
+    uint32_t r6 = ctx->gpr[6];
+    uint32_t r28 = ctx->gpr[28];
+    uint32_t r29 = ctx->gpr[29];
+    uint32_t r30 = ctx->gpr[30];
+    uint32_t r31 = ctx->gpr[31];
+    PPC_FPR f0 = ctx->fpr[0];
+    PPC_FPR f1 = ctx->fpr[1];
+    PPC_FPR f31 = ctx->fpr[31];
+    uint32_t cr = ctx->cr;
+    uint32_t xer = ctx->xer;
+
+    goto loc_80534684;
+
+loc_80534684:
+{
+    MemoryInline::FlatWriteRam32((r1 + -64), r1);
+    r1 = (r1 + -64);
+    r0 = ctx->lr;
+    MemoryInline::FlatWriteRam32((r1 + 68), r0);
+    MemoryInline::FlatWriteRamFloat64((r1 + 48), f31.d);
+    // psq_store w=0 quant=0 (using PPC_PsqSt)
+    r1_psq_tmp_0 = (r1 + 56);
+    PPC_PsqStStackInline<0u, 0u>(ctx, r1_psq_tmp_0, PPC_PsFromScalarInline(f31.d));
+    f31.d = f1.d;
+    r0 = MemoryInline::FlatRead16((r4 + 4));
+    MemoryInline::FlatWriteRam32((r1 + 44), r31);
+    r0 = (r0 * 60);
+    r5 = MemoryInline::FlatRead8((r4 + 6));
+    MemoryInline::FlatWriteRam32((r1 + 40), r30);
+    r30 = r3;
+    r3 = MemoryInline::FlatRead16((r4 + 8));
+    r0 = (r5 + r0);
+    r0 = (r0 * 1000);
+    MemoryInline::FlatWriteRam32((r1 + 36), r29);
+    MemoryInline::FlatWriteRam32((r1 + 32), r28);
+    r4 = (r3 + r0);
+    {
+        const uint32_t ppcCarryValue = static_cast<uint32_t>(r4);
+        const uint32_t ppcCarryShift = static_cast<uint32_t>(31) & 0x3Fu;
+        const bool ppcCarryNegative = (ppcCarryValue & 0x80000000u) != 0;
+        const uint32_t ppcCarry = ppcCarryShift == 0 ? 0u : (ppcCarryShift >= 32 ? (ppcCarryNegative && ppcCarryValue != 0 ? 1u : 0u) : (ppcCarryNegative && (ppcCarryValue & ((1u << ppcCarryShift) - 1u)) != 0 ? 1u : 0u));
+        xer = (xer & 0xDFFFFFFFu) | (ppcCarry << 29);
+    }
+    r3 = (static_cast<int32_t>(r4) >> 31);
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[6] = r6;
+    ctx->fpr[1] = f1;
+    ctx->cr = cr;
+    ctx->xer = xer;
+    InvokeDirectCpu<0x80021A60u>(ctx);
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r6 = ctx->gpr[6];
+    f1 = ctx->fpr[1];
+    cr = ctx->cr;
+    xer = ctx->xer;
+    f1.d = PpcFmulsInline(f31.d, f1.d);
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[6] = r6;
+    ctx->fpr[1] = f1;
+    ctx->cr = cr;
+    ctx->xer = xer;
+    InvokeDirectCpu<0x80021B00u>(ctx);
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r6 = ctx->gpr[6];
+    cr = ctx->cr;
+    xer = ctx->xer;
+    r5 = 59965440;
+    r6 = 0;
+    r0 = (r5 + -25440);
+    r31 = r4;
+    r0_subfc_sub_0 = r0;
+    r0 = (r4 - r0_subfc_sub_0);
+    xer = (xer & 0xDFFFFFFFu) | ((static_cast<uint32_t>(r4) >= static_cast<uint32_t>(r0_subfc_sub_0) ? 1u : 0u) << 29);
+    r29 = r3;
+    r0_not_0 = ~(r6);
+    r0_ca_0 = (xer >> 29) & 1u;
+    r0 = (r0_not_0 + r3);
+    r0 = (r0 + r0_ca_0);
+    {
+        const uint64_t ppcCarryWide = static_cast<uint64_t>(static_cast<uint32_t>(r0_not_0)) + static_cast<uint64_t>(static_cast<uint32_t>(r3)) + (static_cast<uint64_t>(static_cast<uint32_t>(r0_ca_0)) & 1u);
+        xer = (xer & 0xDFFFFFFFu) | (static_cast<uint32_t>((ppcCarryWide >> 32) & 1u) << 29);
+    }
+    r0_not_1 = ~(r4);
+    r0_ca_1 = (xer >> 29) & 1u;
+    r0 = (r0_not_1 + r4);
+    r0 = (r0 + r0_ca_1);
+    {
+        const uint64_t ppcCarryWide = static_cast<uint64_t>(static_cast<uint32_t>(r0_not_1)) + static_cast<uint64_t>(static_cast<uint32_t>(r4)) + (static_cast<uint64_t>(static_cast<uint32_t>(r0_ca_1)) & 1u);
+        xer = (xer & 0xDFFFFFFFu) | (static_cast<uint32_t>((ppcCarryWide >> 32) & 1u) << 29);
+    }
+    r0 = (0 - r0);
+    SetCRResident(cr, xer, 0, static_cast<int32_t>(r0), static_cast<int32_t>(0));
+    if (((cr & 0x20000000u) == 0)) {
+        goto loc_80534730;
+    }
+}
+
+loc_80534704:
+{
+    r5 = 0x808B0000u;
+    r3 = 65536;
+    r5 = (r5 + 11588);
+    r4 = 1;
+    r0 = (r3 + -1);
+    MemoryInline::FlatWrite32(r30, r5);
+    MemoryInline::FlatWrite8((r30 + 10), static_cast<uint8_t>(r4));
+    MemoryInline::FlatWrite16((r30 + 4), static_cast<uint16_t>(r0));
+    MemoryInline::FlatWrite8((r30 + 6), static_cast<uint8_t>(r6));
+    MemoryInline::FlatWrite16((r30 + 8), static_cast<uint16_t>(r6));
+    goto loc_805347CC;
+}
+
+loc_80534730:
+{
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[6] = r6;
+    ctx->fpr[1] = f1;
+    ctx->cr = cr;
+    ctx->xer = xer;
+    InvokeDirectCpu<0x80021A60u>(ctx);
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r6 = ctx->gpr[6];
+    f1 = ctx->fpr[1];
+    cr = ctx->cr;
+    xer = ctx->xer;
+    r4 = 0x80890000u;
+    r3 = 65536;
+    f0.d = MemoryInline::FlatReadFloat32((r4 + 392));
+    r0 = (r3 + -5536);
+    f0.d = PpcFmulsInline(f0.d, f1.d);
+    f0.d = PPC_Fctiwz(f0.d);
+    fctiwzword0 = PPC_FprLowWordInline(f0.d);
+    MemoryInline::FlatWriteRamFloat64((r1 + 8), f0.d);
+    r28 = fctiwzword0;
+    r3 = (r28 & 65535);
+    r3 = (r3 * r0);
+    r0 = (static_cast<int32_t>(r3) >> 31);
+    r31_subfc_min_1 = r31;
+    r31 = (r31_subfc_min_1 - r3);
+    xer = (xer & 0xDFFFFFFFu) | ((static_cast<uint32_t>(r31_subfc_min_1) >= static_cast<uint32_t>(r3) ? 1u : 0u) << 29);
+    r29_subfe_rb_1 = r29;
+    r29_not_1 = ~(r0);
+    r29_ca_1 = (xer >> 29) & 1u;
+    r29 = (r29_not_1 + r29_subfe_rb_1);
+    r29 = (r29 + r29_ca_1);
+    {
+        const uint64_t ppcCarryWide = static_cast<uint64_t>(static_cast<uint32_t>(r29_not_1)) + static_cast<uint64_t>(static_cast<uint32_t>(r29_subfe_rb_1)) + (static_cast<uint64_t>(static_cast<uint32_t>(r29_ca_1)) & 1u);
+        xer = (xer & 0xDFFFFFFFu) | (static_cast<uint32_t>((ppcCarryWide >> 32) & 1u) << 29);
+    }
+    r3 = r29;
+    r4 = r31;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[6] = r6;
+    ctx->fpr[1] = f1;
+    ctx->cr = cr;
+    ctx->xer = xer;
+    InvokeDirectCpu<0x80021A60u>(ctx);
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r6 = ctx->gpr[6];
+    f1 = ctx->fpr[1];
+    cr = ctx->cr;
+    xer = ctx->xer;
+    r4 = 0x80890000u;
+    r0 = 1;
+    f0.d = MemoryInline::FlatReadFloat32((r4 + 396));
+    r3 = 0x808B0000u;
+    r3 = (r3 + 11588);
+    MemoryInline::FlatWrite8((r30 + 10), static_cast<uint8_t>(r0));
+    f0.d = PpcFmulsInline(f0.d, f1.d);
+    r6 = 1000;
+    MemoryInline::FlatWrite32(r30, r3);
+    r5 = 0;
+    f0.d = PPC_Fctiwz(f0.d);
+    MemoryInline::FlatWrite16((r30 + 4), static_cast<uint16_t>(r28));
+    fctiwzword1 = PPC_FprLowWordInline(f0.d);
+    MemoryInline::FlatWriteRamFloat64((r1 + 16), f0.d);
+    r0 = fctiwzword1;
+    MemoryInline::FlatWrite8((r30 + 6), static_cast<uint8_t>(r0));
+    r0 = (r0 & 255);
+    r3 = (r0 * 1000);
+    r0 = (static_cast<int32_t>(r3) >> 31);
+    r4 = (r31 - r3);
+    xer = (xer & 0xDFFFFFFFu) | ((static_cast<uint32_t>(r31) >= static_cast<uint32_t>(r3) ? 1u : 0u) << 29);
+    r3_not_1 = ~(r0);
+    r3_ca_1 = (xer >> 29) & 1u;
+    r3 = (r3_not_1 + r29);
+    r3 = (r3 + r3_ca_1);
+    {
+        const uint64_t ppcCarryWide = static_cast<uint64_t>(static_cast<uint32_t>(r3_not_1)) + static_cast<uint64_t>(static_cast<uint32_t>(r29)) + (static_cast<uint64_t>(static_cast<uint32_t>(r3_ca_1)) & 1u);
+        xer = (xer & 0xDFFFFFFFu) | (static_cast<uint32_t>((ppcCarryWide >> 32) & 1u) << 29);
+    }
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[6] = r6;
+    ctx->cr = cr;
+    ctx->xer = xer;
+    InvokeDirectCpu<0x80021828u>(ctx);
+    r0 = ctx->gpr[0];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    cr = ctx->cr;
+    xer = ctx->xer;
+    MemoryInline::FlatWrite16((r30 + 8), static_cast<uint16_t>(r4));
+}
+
+loc_805347CC:
+{
+    // psq_load w=0 quant=0 (using PPC_PsqL)
+    r0 = MemoryInline::FlatRead32((r1 + 68));
+    f31.d = MemoryInline::FlatReadFloat64((r1 + 48));
+    r31 = MemoryInline::FlatRead32((r1 + 44));
+    r30 = MemoryInline::FlatRead32((r1 + 40));
+    r29 = MemoryInline::FlatRead32((r1 + 36));
+    r28 = MemoryInline::FlatRead32((r1 + 32));
+    ctx->lr = r0;
+    r1 = (r1 + 64);
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[6] = r6;
+    ctx->gpr[28] = r28;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    ctx->fpr[0] = f0;
+    ctx->fpr[1] = f1;
+    ctx->fpr[31] = f31;
+    ctx->cr = cr;
+    ctx->xer = xer;
+    return;
+}
+
+}
+
+// RECOMP_GUEST_ABI gpr_read=0xF00007DA gpr_write=0xF00007FB gpr_return=0x00000018 fpr_read=0x80000003 fpr_write=0x80000003 fpr_return=0x00000002 cr_read=0x01 cr_write=0x01 xer_read=1 xer_write=1 fence=0
+// RECOMP_REGISTRATION base 0x80534684 func_80534684 preserves=false fpr_mask=0x80000000

@@ -1,0 +1,491 @@
+#include <cstdint>
+#include "ppc_runtime.h"
+#include "abi_bridge.h"
+#include "memory.h"
+#include "recomp_mod_loader.h"
+
+extern "C" void func_801CCA68(CpuContext* MKW_RESTRICT ctx)
+{
+    uint32_t cr0_0 = 0;
+    uint32_t r0_rot_0 = 0;
+    uint32_t r0_rot_1 = 0;
+    uint32_t r0_rot_2 = 0;
+    uint32_t r3_addr_0 = 0;
+    uint32_t r3_addr_1 = 0;
+    uint32_t r3_addr_2 = 0;
+
+    uint32_t r0 = ctx->gpr[0];
+    uint32_t r1 = ctx->gpr[1];
+    uint32_t r3 = ctx->gpr[3];
+    uint32_t r4 = ctx->gpr[4];
+    uint32_t r5 = ctx->gpr[5];
+    uint32_t r12 = ctx->gpr[12];
+    uint32_t r29 = ctx->gpr[29];
+    uint32_t r30 = ctx->gpr[30];
+    uint32_t r31 = ctx->gpr[31];
+    uint32_t cr = ctx->cr;
+    uint32_t ctr = ctx->ctr;
+    uint32_t xer = ctx->xer;
+
+    goto loc_801CCA68;
+
+loc_801CCA68:
+{
+    MemoryInline::FlatWriteRam32((r1 + -32), r1);
+    r1 = (r1 + -32);
+    r0 = ctx->lr;
+    MemoryInline::FlatWriteRam32((r1 + 36), r0);
+    MemoryInline::FlatWriteRam32((r1 + 28), r31);
+    r31 = 0;
+    MemoryInline::FlatWriteRam32((r1 + 24), r30);
+    r30 = 0x80350000u;
+    r30 = (r30 + 16608);
+    MemoryInline::FlatWriteRam32((r1 + 20), r29);
+    r29 = (r30 + 0);
+    r0 = MemoryInline::FlatRead8((r29 + 13));
+    MemoryInline::FlatWriteRam8((r29 + 12), static_cast<uint8_t>(r31));
+    SetCRResident(cr, xer, 0, static_cast<uint32_t>(r0), static_cast<uint32_t>(8));
+}
+
+loc_801CCA9C:
+{
+    if (((cr & 0x40000000u) != 0)) {
+        goto loc_801CCBA8;
+    }
+}
+
+loc_801CCAA0:
+{
+    r3 = 0x802A0000u;
+    r0_rot_1 = PpcRotl32Inline(static_cast<uint32_t>(r0), static_cast<uint32_t>(2));
+    r0 = (r0_rot_1 & -4);
+    r3 = (r3 + 268);
+    r3_addr_1 = (r3 + r0);
+    r3 = MemoryInline::FlatRead32(r3_addr_1);
+    ctr = r3;
+    switch (static_cast<uint32_t>(ctr)) {
+    case 0x801CCBA8u:
+        goto loc_801CCBA8;
+        break;
+    case 0x801CCAB8u:
+        goto loc_801CCAB8;
+        break;
+    case 0x801CCAD0u:
+        goto loc_801CCAD0;
+        break;
+    case 0x801CCADCu:
+        goto loc_801CCADC;
+        break;
+    case 0x801CCAE8u:
+        goto loc_801CCAE8;
+        break;
+    case 0x801CCB54u:
+        goto loc_801CCB54;
+        break;
+    default:
+        ctx->gpr[0] = r0;
+        ctx->gpr[1] = r1;
+        ctx->gpr[3] = r3;
+        ctx->gpr[4] = r4;
+        ctx->gpr[5] = r5;
+        ctx->gpr[12] = r12;
+        ctx->gpr[29] = r29;
+        ctx->gpr[30] = r30;
+        ctx->gpr[31] = r31;
+        ctx->cr = cr;
+        ctx->ctr = ctr;
+        InvokeIndirectJump(ctr, ctx);
+        return;
+    }
+}
+
+loc_801CCAB8:
+{
+    r3 = 0;
+    r4 = 0;
+    ctx->lr = 0x801CCAC4u;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    ctx->cr = cr;
+    InvokeDirectCpu<0x801349B8u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r29 = ctx->gpr[29];
+    r30 = ctx->gpr[30];
+    r31 = ctx->gpr[31];
+    cr = ctx->cr;
+    r0 = 2;
+    MemoryInline::FlatWriteRam8((r29 + 13), static_cast<uint8_t>(r0));
+    goto loc_801CCBA8;
+}
+
+loc_801CCAD0:
+{
+    ctx->lr = 0x801CCAD4u;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[12] = r12;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    ctx->cr = cr;
+    ctx->ctr = ctr;
+    InvokeDirectCpu<0x801CC91Cu>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r12 = ctx->gpr[12];
+    r29 = ctx->gpr[29];
+    r30 = ctx->gpr[30];
+    r31 = ctx->gpr[31];
+    cr = ctx->cr;
+    ctr = ctx->ctr;
+    xer = ctx->xer;
+    MemoryInline::FlatWriteRam8((r29 + 13), static_cast<uint8_t>(r3));
+    goto loc_801CCBA8;
+}
+
+loc_801CCADC:
+{
+    ctx->lr = 0x801CCAE0u;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[12] = r12;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    ctx->cr = cr;
+    ctx->ctr = ctr;
+    InvokeDirectCpu<0x801CC9B4u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r12 = ctx->gpr[12];
+    r29 = ctx->gpr[29];
+    r30 = ctx->gpr[30];
+    r31 = ctx->gpr[31];
+    cr = ctx->cr;
+    ctr = ctx->ctr;
+    xer = ctx->xer;
+    MemoryInline::FlatWriteRam8((r29 + 13), static_cast<uint8_t>(r3));
+    goto loc_801CCBA8;
+}
+
+loc_801CCAE8:
+{
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    InvokeDirectCpu<0x801B0220u>(ctx);
+    r3 = ctx->gpr[3];
+    SetCRResident(cr, xer, 0, static_cast<uint32_t>(r3), static_cast<uint32_t>(1));
+}
+
+loc_801CCAF0:
+{
+    if (((cr & 0x20000000u) != 0)) {
+        goto loc_801CCBA8;
+    }
+}
+
+loc_801CCAF4:
+{
+    r3 = (r30 + 1872);
+    r4 = 0;
+    r5 = 1121;
+    ctx->lr = 0x801CCB04u;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[31] = r31;
+    ctx->cr = cr;
+    InvokeDirectCpu<0x80006038u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r31 = ctx->gpr[31];
+    cr = ctx->cr;
+    xer = ctx->xer;
+    r3 = (r30 + 7520);
+    r4 = 0;
+    r5 = 517;
+    ctx->lr = 0x801CCB14u;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[31] = r31;
+    ctx->cr = cr;
+    InvokeDirectCpu<0x80006038u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r31 = ctx->gpr[31];
+    cr = ctx->cr;
+    xer = ctx->xer;
+    r3 = (r30 + 1872);
+    ctx->lr = 0x801CCB1Cu;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[12] = r12;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    ctx->cr = cr;
+    ctx->ctr = ctr;
+    InvokeDirectCpu<0x801B1EDCu>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r12 = ctx->gpr[12];
+    r29 = ctx->gpr[29];
+    r30 = ctx->gpr[30];
+    r31 = ctx->gpr[31];
+    cr = ctx->cr;
+    ctr = ctx->ctr;
+    xer = ctx->xer;
+    r31 = r3;
+    r3 = (r30 + 7520);
+    ctx->lr = 0x801CCB28u;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[12] = r12;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    ctx->cr = cr;
+    ctx->ctr = ctr;
+    InvokeDirectCpu<0x801B1EF4u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r12 = ctx->gpr[12];
+    r29 = ctx->gpr[29];
+    r30 = ctx->gpr[30];
+    r31 = ctx->gpr[31];
+    cr = ctx->cr;
+    ctr = ctx->ctr;
+    xer = ctx->xer;
+    r0 = (r31 | r3);
+    SetCRResident(cr, xer, 0, static_cast<int32_t>(r0), static_cast<int32_t>(0));
+    if (((cr & 0x20000000u) != 0)) {
+        goto loc_801CCB48;
+    }
+}
+
+loc_801CCB30:
+{
+    r0 = 6;
+    r3 = 0x801D0000u;
+    MemoryInline::FlatWriteRam8((r29 + 13), static_cast<uint8_t>(r0));
+    r3 = (r3 + -17680);
+    ctx->lr = 0x801CCB44u;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[12] = r12;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    ctx->cr = cr;
+    ctx->ctr = ctr;
+    InvokeDirectCpu<0x801B1690u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r12 = ctx->gpr[12];
+    r29 = ctx->gpr[29];
+    r30 = ctx->gpr[30];
+    r31 = ctx->gpr[31];
+    cr = ctx->cr;
+    ctr = ctx->ctr;
+    xer = ctx->xer;
+    goto loc_801CCBA8;
+}
+
+loc_801CCB48:
+{
+    r0 = 8;
+    MemoryInline::FlatWriteRam8((r29 + 13), static_cast<uint8_t>(r0));
+    goto loc_801CCBA8;
+}
+
+loc_801CCB54:
+{
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    InvokeDirectCpu<0x801A65ACu>(ctx);
+    r3 = ctx->gpr[3];
+    r30 = MemoryInline::FlatRead8((r29 + 1770));
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    InvokeDirectCpu<0x801A65D4u>(ctx);
+    r3 = ctx->gpr[3];
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    InvokeDirectCpu<0x801A65ACu>(ctx);
+    r3 = ctx->gpr[3];
+    MemoryInline::FlatWriteRam8((r29 + 1771), static_cast<uint8_t>(r31));
+    MemoryInline::FlatWriteRam8((r29 + 1770), static_cast<uint8_t>(r30));
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    InvokeDirectCpu<0x801A65D4u>(ctx);
+    r3 = ctx->gpr[3];
+    r4 = r30;
+    r3 = 0;
+    ctx->lr = 0x801CCB7Cu;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    ctx->cr = cr;
+    InvokeDirectCpu<0x801349B8u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r29 = ctx->gpr[29];
+    r30 = ctx->gpr[30];
+    r31 = ctx->gpr[31];
+    cr = ctx->cr;
+    r3 = (r29 + 1808);
+    ctx->lr = 0x801CCB84u;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    ctx->cr = cr;
+    InvokeDirectCpu<0x801A0964u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r29 = ctx->gpr[29];
+    r30 = ctx->gpr[30];
+    r31 = ctx->gpr[31];
+    cr = ctx->cr;
+    xer = ctx->xer;
+    r12 = MemoryInline::FlatRead32((r29 + 8));
+    MemoryInline::FlatWriteRam8((r29 + 13), static_cast<uint8_t>(r31));
+    SetCRResident(cr, xer, 0, static_cast<int32_t>(r12), static_cast<int32_t>(0));
+}
+
+loc_801CCB90:
+{
+    if (((cr & 0x20000000u) != 0)) {
+        goto loc_801CCBA0;
+    }
+}
+
+loc_801CCB94:
+{
+    r3 = 1;
+    ctr = r12;
+    ctx->lr = 0x801CCBA0u;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[12] = r12;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    ctx->cr = cr;
+    ctx->ctr = ctr;
+    InvokeIndirectCpu(ctr, ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r12 = ctx->gpr[12];
+    r29 = ctx->gpr[29];
+    r30 = ctx->gpr[30];
+    r31 = ctx->gpr[31];
+    cr = ctx->cr;
+    ctr = ctx->ctr;
+    xer = ctx->xer;
+}
+
+loc_801CCBA0:
+{
+    r0 = 0;
+    MemoryInline::FlatWriteRam8((r29 + 13), static_cast<uint8_t>(r0));
+}
+
+loc_801CCBA8:
+{
+    r0 = MemoryInline::FlatRead32((r1 + 36));
+    r31 = MemoryInline::FlatRead32((r1 + 28));
+    r30 = MemoryInline::FlatRead32((r1 + 24));
+    r29 = MemoryInline::FlatRead32((r1 + 20));
+    ctx->lr = r0;
+    r1 = (r1 + 32);
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[12] = r12;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    ctx->cr = cr;
+    ctx->ctr = ctr;
+    return;
+}
+
+}
+
+// RECOMP_GUEST_ABI gpr_read=0xFFFFFFFF gpr_write=0xFFFFFFFF gpr_return=0x00000018 fpr_read=0xFFFFFFFF fpr_write=0xFFFFFFFF fpr_return=0x00000002 cr_read=0xFF cr_write=0xFF xer_read=1 xer_write=1 fence=1
+// RECOMP_REGISTRATION base 0x801CCA68 func_801CCA68 preserves=true fpr_mask=0x00000000

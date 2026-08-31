@@ -1,0 +1,108 @@
+#include <cstdint>
+#include "ppc_runtime.h"
+#include "abi_bridge.h"
+#include "memory.h"
+#include "recomp_mod_loader.h"
+
+extern "C" void func_801A792C(CpuContext* MKW_RESTRICT ctx)
+{
+    uint32_t r3 = ctx->gpr[3];
+    uint32_t r4 = ctx->gpr[4];
+    uint32_t r5 = ctx->gpr[5];
+    uint32_t r6 = ctx->gpr[6];
+    uint32_t r7 = ctx->gpr[7];
+
+    goto loc_801A792C;
+
+loc_801A792C:
+{
+    r7 = 0;
+    r4 = 268435456;
+    r4 = (r4 + 2);
+    r3 = 0x90000000u;
+    r3 = (r3 + 1023);
+    r6 = 268435456;
+    r6 = (r6 + 42);
+    r5 = -805306368;
+    r5 = (r5 + 2047);
+    // isync @ 0x801A7950 (no-op)
+    // mtspr 568 (unknown SPR) @ 0x801A7954
+    PPC_WriteSpr(568, r7);
+    // mtspr 569 (unknown SPR) @ 0x801A7958
+    PPC_WriteSpr(569, r4);
+    // mtspr 568 (unknown SPR) @ 0x801A795C
+    PPC_WriteSpr(568, r3);
+    // isync @ 0x801A7960 (no-op)
+    // mtspr 560 (unknown SPR) @ 0x801A7964
+    PPC_WriteSpr(560, r7);
+    // mtspr 561 (unknown SPR) @ 0x801A7968
+    PPC_WriteSpr(561, r4);
+    // mtspr 560 (unknown SPR) @ 0x801A796C
+    PPC_WriteSpr(560, r3);
+    // isync @ 0x801A7970 (no-op)
+    // mtspr 570 (unknown SPR) @ 0x801A7974
+    PPC_WriteSpr(570, r7);
+    // mtspr 571 (unknown SPR) @ 0x801A7978
+    PPC_WriteSpr(571, r6);
+    // mtspr 570 (unknown SPR) @ 0x801A797C
+    PPC_WriteSpr(570, r5);
+    // isync @ 0x801A7980 (no-op)
+    // mtspr 562 (unknown SPR) @ 0x801A7984
+    PPC_WriteSpr(562, r7);
+    // mtspr 563 (unknown SPR) @ 0x801A7988
+    PPC_WriteSpr(563, r7);
+    // isync @ 0x801A798C (no-op)
+    r4 = 301989888;
+    r4 = (r4 + 2);
+    r3 = 0x92000000u;
+    r3 = (r3 + 511);
+    r6 = 318767104;
+    r6 = (r6 + 2);
+    r5 = 0x93000000u;
+    r5 = (r5 + 255);
+    // isync @ 0x801A79B0 (no-op)
+    // mtspr 572 (unknown SPR) @ 0x801A79B4
+    PPC_WriteSpr(572, r7);
+    // mtspr 573 (unknown SPR) @ 0x801A79B8
+    PPC_WriteSpr(573, r4);
+    // mtspr 572 (unknown SPR) @ 0x801A79BC
+    PPC_WriteSpr(572, r3);
+    // isync @ 0x801A79C0 (no-op)
+    // mtspr 564 (unknown SPR) @ 0x801A79C4
+    PPC_WriteSpr(564, r7);
+    // mtspr 565 (unknown SPR) @ 0x801A79C8
+    PPC_WriteSpr(565, r4);
+    // mtspr 564 (unknown SPR) @ 0x801A79CC
+    PPC_WriteSpr(564, r3);
+    // isync @ 0x801A79D0 (no-op)
+    // mtspr 574 (unknown SPR) @ 0x801A79D4
+    PPC_WriteSpr(574, r7);
+    // mtspr 575 (unknown SPR) @ 0x801A79D8
+    PPC_WriteSpr(575, r6);
+    // mtspr 574 (unknown SPR) @ 0x801A79DC
+    PPC_WriteSpr(574, r5);
+    // isync @ 0x801A79E0 (no-op)
+    // mtspr 566 (unknown SPR) @ 0x801A79E4
+    PPC_WriteSpr(566, r7);
+    // mtspr 567 (unknown SPR) @ 0x801A79E8
+    PPC_WriteSpr(567, r6);
+    // mtspr 566 (unknown SPR) @ 0x801A79EC
+    PPC_WriteSpr(566, r5);
+    // isync @ 0x801A79F0 (no-op)
+    r3 = ctx->msr;
+    r3 = (r3 | 48);
+    ctx->srr1 = r3;
+    r3 = ctx->lr;
+    ctx->srr0 = r3;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[6] = r6;
+    ctx->gpr[7] = r7;
+    return;
+}
+
+}
+
+// RECOMP_GUEST_ABI gpr_read=0x00000000 gpr_write=0x000000F8 gpr_return=0x00000018 fpr_read=0x00000000 fpr_write=0x00000000 fpr_return=0x00000000 cr_read=0x00 cr_write=0x00 xer_read=0 xer_write=0 fence=0
+// RECOMP_REGISTRATION base 0x801A792C func_801A792C preserves=true fpr_mask=0x00000000

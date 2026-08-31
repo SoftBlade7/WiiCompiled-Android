@@ -1,0 +1,342 @@
+#include <cstdint>
+#include "ppc_runtime.h"
+#include "abi_bridge.h"
+#include "memory.h"
+#include "recomp_mod_loader.h"
+
+extern "C" void func_805BB3BC(CpuContext* MKW_RESTRICT ctx)
+{
+    uint32_t r0_rot_0 = 0;
+    uint8_t* guest_range_0 = nullptr;
+
+    uint32_t r0 = ctx->gpr[0];
+    uint32_t r1 = ctx->gpr[1];
+    uint32_t r3 = ctx->gpr[3];
+    uint32_t r4 = ctx->gpr[4];
+    uint32_t r5 = ctx->gpr[5];
+    uint32_t r6 = ctx->gpr[6];
+    uint32_t r7 = ctx->gpr[7];
+    uint32_t r8 = ctx->gpr[8];
+    uint32_t r9 = ctx->gpr[9];
+    uint32_t r10 = ctx->gpr[10];
+    uint32_t r11 = ctx->gpr[11];
+    uint32_t r12 = ctx->gpr[12];
+    uint32_t r29 = ctx->gpr[29];
+    uint32_t r30 = ctx->gpr[30];
+    uint32_t r31 = ctx->gpr[31];
+    PPC_FPR f1 = ctx->fpr[1];
+    uint32_t ctr = ctx->ctr;
+
+    goto loc_805BB3BC;
+
+loc_805BB3BC:
+{
+    MemoryInline::FlatWriteRam32((r1 + -96), r1);
+    r1 = (r1 + -96);
+    r0 = ctx->lr;
+    r4 = 1;
+    r5 = 0;
+    MemoryInline::FlatWriteRam32((r1 + 100), r0);
+    MemoryInline::FlatWriteRam32((r1 + 92), r31);
+    MemoryInline::FlatWriteRam32((r1 + 88), r30);
+    MemoryInline::FlatWriteRam32((r1 + 84), r29);
+    r29 = r3;
+    r12 = MemoryInline::FlatRead32((r3 + 88));
+    r12 = MemoryInline::FlatRead32((r12 + 16));
+    ctr = r12;
+    r3 = (r3 + 88);
+    ctx->lr = 0x805BB3F4u;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[6] = r6;
+    ctx->gpr[7] = r7;
+    ctx->gpr[8] = r8;
+    ctx->gpr[9] = r9;
+    ctx->gpr[10] = r10;
+    ctx->gpr[11] = r11;
+    ctx->gpr[12] = r12;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    ctx->fpr[1] = f1;
+    ctx->ctr = ctr;
+    InvokeIndirectCpu(ctr, ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r6 = ctx->gpr[6];
+    r7 = ctx->gpr[7];
+    r8 = ctx->gpr[8];
+    r9 = ctx->gpr[9];
+    r10 = ctx->gpr[10];
+    r11 = ctx->gpr[11];
+    r12 = ctx->gpr[12];
+    r29 = ctx->gpr[29];
+    r30 = ctx->gpr[30];
+    r31 = ctx->gpr[31];
+    f1 = ctx->fpr[1];
+    ctr = ctx->ctr;
+    r3 = r29;
+    r4 = (r29 + 88);
+    // inline leaf 0x80602474 (2 guest instruction(s))
+    MemoryInline::FlatWrite32((r3 + 56), r4);
+    // end of inlined leaf 0x80602474
+    r3 = (r29 + 88);
+    r5 = (r29 + 68);
+    r4 = 0;
+    r6 = 0;
+    // inline leaf 0x805EF768 (6 guest instruction(s))
+    r0_rot_0 = PpcRotl32Inline(static_cast<uint32_t>(r4), static_cast<uint32_t>(2));
+    r0 = (r0_rot_0 & -4);
+    r4 = (r3 + r4);
+    r3 = (r3 + r0);
+    MemoryInline::FlatWrite32((r3 + 16), r5);
+    MemoryInline::FlatWrite8((r4 + 52), static_cast<uint8_t>(r6));
+    // end of inlined leaf 0x805EF768
+    r3 = r29;
+    r4 = 1;
+    ctx->lr = 0x805BB420u;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[6] = r6;
+    ctx->gpr[7] = r7;
+    ctx->gpr[8] = r8;
+    ctx->gpr[9] = r9;
+    ctx->gpr[10] = r10;
+    ctx->gpr[11] = r11;
+    ctx->gpr[12] = r12;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    ctx->fpr[1] = f1;
+    ctx->ctr = ctr;
+    InvokeDirectCpu<0x8060245Cu>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r6 = ctx->gpr[6];
+    r7 = ctx->gpr[7];
+    r8 = ctx->gpr[8];
+    r9 = ctx->gpr[9];
+    r10 = ctx->gpr[10];
+    r11 = ctx->gpr[11];
+    r12 = ctx->gpr[12];
+    r29 = ctx->gpr[29];
+    r30 = ctx->gpr[30];
+    r31 = ctx->gpr[31];
+    f1 = ctx->fpr[1];
+    ctr = ctx->ctr;
+    r3 = r29;
+    r5 = (r29 + 416);
+    r4 = 0;
+    r6 = 0;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[6] = r6;
+    ctx->gpr[7] = r7;
+    ctx->gpr[8] = r8;
+    InvokeDirectCpu<0x8060246Cu>(ctx);
+    r0 = ctx->gpr[0];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r6 = ctx->gpr[6];
+    r7 = ctx->gpr[7];
+    r8 = ctx->gpr[8];
+    r3 = (r1 + 40);
+    r4 = (r29 + 416);
+    // inline leaf 0x805C2C18 (2 guest instruction(s))
+    guest_range_0 = MemoryInline::ResolveRangeHost((r3 + -32), 0, 36u, false, true);
+    MemoryInline::WriteResolved32(guest_range_0, 32u, r3, r4);
+    // end of inlined leaf 0x805C2C18
+    r30 = 0x80890000u;
+    r30 = (r30 + 10560);
+    r31 = MemoryInline::FlatRead32(r30);
+    r4 = 0x80890000u;
+    MemoryInline::WriteResolved32(guest_range_0, 0u, (r1 + 8), r31);
+    r12 = MemoryInline::FlatRead32((r30 + 4));
+    r4 = (r4 + 11064);
+    r11 = MemoryInline::FlatRead32((r30 + 8));
+    r3 = (r1 + 40);
+    r10 = MemoryInline::FlatRead32((r30 + 12));
+    r5 = (r4 + 12);
+    r9 = MemoryInline::FlatRead32((r30 + 16));
+    r6 = (r4 + 27);
+    r8 = MemoryInline::FlatRead32((r30 + 20));
+    r7 = (r1 + 8);
+    r0 = MemoryInline::FlatRead32((r30 + 24));
+    if (!MemoryInline::WriteResolvedPair32(guest_range_0, 4u, ((static_cast<uint64_t>(static_cast<uint32_t>(r12)) << 32) | static_cast<uint32_t>(r11)))) {
+        MemoryInline::WriteResolved32(guest_range_0, 4u, (r1 + 12), r12);
+        MemoryInline::WriteResolved32(guest_range_0, 8u, (r1 + 16), r11);
+    }
+    if (!MemoryInline::WriteResolvedPair32(guest_range_0, 12u, ((static_cast<uint64_t>(static_cast<uint32_t>(r10)) << 32) | static_cast<uint32_t>(r9)))) {
+        MemoryInline::WriteResolved32(guest_range_0, 12u, (r1 + 20), r10);
+        MemoryInline::WriteResolved32(guest_range_0, 16u, (r1 + 24), r9);
+    }
+    if (!MemoryInline::WriteResolvedPair32(guest_range_0, 20u, ((static_cast<uint64_t>(static_cast<uint32_t>(r8)) << 32) | static_cast<uint32_t>(r0)))) {
+        MemoryInline::WriteResolved32(guest_range_0, 20u, (r1 + 28), r8);
+        MemoryInline::WriteResolved32(guest_range_0, 24u, (r1 + 32), r0);
+    }
+    ctx->lr = 0x805BB498u;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[6] = r6;
+    ctx->gpr[7] = r7;
+    ctx->gpr[8] = r8;
+    ctx->gpr[9] = r9;
+    ctx->gpr[10] = r10;
+    ctx->gpr[11] = r11;
+    ctx->gpr[12] = r12;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    ctx->fpr[1] = f1;
+    ctx->ctr = ctr;
+    InvokeDirectCpu<0x805C2C60u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r6 = ctx->gpr[6];
+    r7 = ctx->gpr[7];
+    r8 = ctx->gpr[8];
+    r9 = ctx->gpr[9];
+    r10 = ctx->gpr[10];
+    r11 = ctx->gpr[11];
+    r12 = ctx->gpr[12];
+    r29 = ctx->gpr[29];
+    r30 = ctx->gpr[30];
+    r31 = ctx->gpr[31];
+    f1 = ctx->fpr[1];
+    ctr = ctx->ctr;
+    r3 = (r29 + 568);
+    r4 = 0;
+    // inline leaf 0x8063C820 (4 guest instruction(s))
+    r0 = (r4 * 68);
+    r3 = MemoryInline::FlatRead32(r3);
+    r3 = (r3 + r0);
+    // end of inlined leaf 0x8063C820
+    r5 = 0x80890000u;
+    r4 = 0;
+    f1.d = MemoryInline::FlatReadFloat32((r5 + 10588));
+    ctx->lr = 0x805BB4B4u;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[6] = r6;
+    ctx->gpr[7] = r7;
+    ctx->gpr[8] = r8;
+    ctx->gpr[9] = r9;
+    ctx->gpr[10] = r10;
+    ctx->gpr[11] = r11;
+    ctx->gpr[12] = r12;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    ctx->fpr[1] = f1;
+    ctx->ctr = ctr;
+    InvokeDirectCpu<0x8063C91Cu>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r6 = ctx->gpr[6];
+    r7 = ctx->gpr[7];
+    r8 = ctx->gpr[8];
+    r9 = ctx->gpr[9];
+    r10 = ctx->gpr[10];
+    r11 = ctx->gpr[11];
+    r12 = ctx->gpr[12];
+    r29 = ctx->gpr[29];
+    r30 = ctx->gpr[30];
+    r31 = ctx->gpr[31];
+    f1 = ctx->fpr[1];
+    ctr = ctx->ctr;
+    r3 = (r1 + 40);
+    r4 = -1;
+    ctx->lr = 0x805BB4C0u;
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[6] = r6;
+    ctx->gpr[7] = r7;
+    ctx->gpr[8] = r8;
+    ctx->gpr[9] = r9;
+    ctx->gpr[10] = r10;
+    ctx->gpr[11] = r11;
+    ctx->gpr[12] = r12;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    ctx->fpr[1] = f1;
+    ctx->ctr = ctr;
+    InvokeDirectCpu<0x805C2C20u>(ctx);
+    r0 = ctx->gpr[0];
+    r1 = ctx->gpr[1];
+    r3 = ctx->gpr[3];
+    r4 = ctx->gpr[4];
+    r5 = ctx->gpr[5];
+    r6 = ctx->gpr[6];
+    r7 = ctx->gpr[7];
+    r8 = ctx->gpr[8];
+    r9 = ctx->gpr[9];
+    r10 = ctx->gpr[10];
+    r11 = ctx->gpr[11];
+    r12 = ctx->gpr[12];
+    r29 = ctx->gpr[29];
+    r30 = ctx->gpr[30];
+    r31 = ctx->gpr[31];
+    f1 = ctx->fpr[1];
+    ctr = ctx->ctr;
+    r0 = MemoryInline::FlatRead32((r1 + 100));
+    r31 = MemoryInline::FlatRead32((r1 + 92));
+    r30 = MemoryInline::FlatRead32((r1 + 88));
+    r29 = MemoryInline::FlatRead32((r1 + 84));
+    ctx->lr = r0;
+    r1 = (r1 + 96);
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[6] = r6;
+    ctx->gpr[7] = r7;
+    ctx->gpr[8] = r8;
+    ctx->gpr[9] = r9;
+    ctx->gpr[10] = r10;
+    ctx->gpr[11] = r11;
+    ctx->gpr[12] = r12;
+    ctx->gpr[29] = r29;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    ctx->fpr[1] = f1;
+    ctx->ctr = ctr;
+    return;
+}
+
+}
+
+// RECOMP_GUEST_ABI gpr_read=0xFFFFEFCE gpr_write=0xFFFFFFFF gpr_return=0x00000018 fpr_read=0xFFFFFFFF fpr_write=0xFFFFFFFF fpr_return=0x00000002 cr_read=0xFF cr_write=0xFF xer_read=1 xer_write=1 fence=1
+// RECOMP_REGISTRATION base 0x805BB3BC func_805BB3BC preserves=true fpr_mask=0x00000000

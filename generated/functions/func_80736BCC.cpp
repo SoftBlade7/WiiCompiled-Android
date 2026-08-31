@@ -1,0 +1,150 @@
+#include <cstdint>
+#include "ppc_runtime.h"
+#include "abi_bridge.h"
+#include "memory.h"
+#include "recomp_mod_loader.h"
+
+extern "C" void func_80736BCC(CpuContext* MKW_RESTRICT ctx)
+{
+    uint32_t cr0_0 = 0;
+    double leaf_stack_saved_f31_entry = 0.0;
+
+    uint32_t r0 = ctx->gpr[0];
+    uint32_t r1 = ctx->gpr[1];
+    uint32_t r3 = ctx->gpr[3];
+    uint32_t r4 = ctx->gpr[4];
+    uint32_t r5 = ctx->gpr[5];
+    uint32_t r30 = ctx->gpr[30];
+    uint32_t r31 = ctx->gpr[31];
+    PPC_FPR f0 = ctx->fpr[0];
+    PPC_FPR f1 = ctx->fpr[1];
+    PPC_FPR f2 = ctx->fpr[2];
+    PPC_FPR f3 = ctx->fpr[3];
+    PPC_FPR f4 = ctx->fpr[4];
+    PPC_FPR f31 = ctx->fpr[31];
+    uint32_t cr = ctx->cr;
+
+    goto loc_80736BCC;
+
+loc_80736BCC:
+{
+    leaf_stack_saved_f31_entry = f31.d;
+    MemoryInline::FlatWriteRam32((r1 + -64), r1);
+    r1 = (r1 + -64);
+    r0 = ctx->lr;
+    MemoryInline::FlatWriteRam32((r1 + 68), r0);
+    // psq_store w=0 quant=0 (using PPC_PsqSt)
+    f31.d = f1.d;
+    MemoryInline::FlatWriteRam32((r1 + 44), r31);
+    MemoryInline::FlatWriteRam32((r1 + 40), r30);
+    r30 = r4;
+    r3 = MemoryInline::FlatRead32((r3 + 496));
+    r31 = MemoryInline::FlatRead32(r3);
+    r3 = r31;
+    // inline leaf 0x8059077C (3 guest instruction(s))
+    r3 = MemoryInline::FlatRead32(r3);
+    r3 = MemoryInline::FlatRead32((r3 + 40));
+    // end of inlined leaf 0x8059077C
+    r5 = MemoryInline::FlatRead32((r3 + 116));
+    r4 = MemoryInline::FlatRead32((r3 + 120));
+    r0 = MemoryInline::FlatRead32((r3 + 124));
+    r3 = r31;
+    MemoryInline::FlatWriteRam32((r1 + 20), r5);
+    MemoryInline::FlatWriteRam32((r1 + 24), r4);
+    MemoryInline::FlatWriteRam32((r1 + 28), r0);
+    // inline leaf 0x8059020C (6 guest instruction(s))
+    r3 = MemoryInline::FlatRead32(r3);
+    r3 = MemoryInline::FlatRead32((r3 + 8));
+    r3 = MemoryInline::FlatRead32((r3 + 144));
+    r3 = MemoryInline::FlatRead32((r3 + 4));
+    r3 = (r3 + 104);
+    // end of inlined leaf 0x8059020C
+    r31 = r3;
+    r3 = r30;
+    // inline leaf 0x8059020C (6 guest instruction(s))
+    r3 = MemoryInline::FlatRead32(r3);
+    r3 = MemoryInline::FlatRead32((r3 + 8));
+    r3 = MemoryInline::FlatRead32((r3 + 144));
+    r3 = MemoryInline::FlatRead32((r3 + 4));
+    r3 = (r3 + 104);
+    // end of inlined leaf 0x8059020C
+    r4 = r3;
+    r5 = r31;
+    r3 = (r1 + 8);
+    // inline leaf 0x8051486C (13 guest instruction(s))
+    f1.d = MemoryInline::FlatReadFloat32((r4 + 8));
+    f0.d = MemoryInline::FlatReadFloat32((r5 + 8));
+    f3.d = MemoryInline::FlatReadFloat32((r4 + 4));
+    f4.d = static_cast<double>(PpcForceSingleValueInline(f1.d - f0.d));
+    f2.d = MemoryInline::FlatReadFloat32((r5 + 4));
+    f1.d = MemoryInline::FlatReadFloat32(r4);
+    f0.d = MemoryInline::FlatReadFloat32(r5);
+    f2.d = static_cast<double>(PpcForceSingleValueInline(f3.d - f2.d));
+    MemoryInline::FlatWriteRamFloat32((r3 + 8), f4.d);
+    f0.d = static_cast<double>(PpcForceSingleValueInline(f1.d - f0.d));
+    MemoryInline::FlatWriteRamFloat32((r3 + 4), f2.d);
+    MemoryInline::FlatWriteRamFloat32(r3, f0.d);
+    // end of inlined leaf 0x8051486C
+    f4.d = MemoryInline::FlatReadFloat32((r1 + 8));
+    f0.d = (-(f31.d));
+    f3.d = MemoryInline::FlatReadFloat32((r1 + 20));
+    f2.d = MemoryInline::FlatReadFloat32((r1 + 12));
+    f1.d = MemoryInline::FlatReadFloat32((r1 + 24));
+    f3.d = PpcFmulsInline(f4.d, f3.d);
+    f4.d = MemoryInline::FlatReadFloat32((r1 + 16));
+    f1.d = PpcFmulsInline(f2.d, f1.d);
+    f2.d = MemoryInline::FlatReadFloat32((r1 + 28));
+    f2.d = PpcFmulsInline(f4.d, f2.d);
+    f1.d = static_cast<double>(PpcForceSingleValueInline(f3.d + f1.d));
+    f1.d = static_cast<double>(PpcForceSingleValueInline(f2.d + f1.d));
+    SetCRFloatResident(cr, 0, f1.d, f0.d);
+}
+
+loc_80736C70:
+{
+    if (((cr & 0x80000000u) == 0)) {
+        goto loc_80736C7C;
+    }
+}
+
+loc_80736C74:
+{
+    r3 = 1;
+    goto loc_80736C80;
+}
+
+loc_80736C7C:
+{
+    r3 = 0;
+}
+
+loc_80736C80:
+{
+    // psq_load w=0 quant=0 (using PPC_PsqL)
+    r0 = MemoryInline::FlatRead32((r1 + 68));
+    f31.d = leaf_stack_saved_f31_entry;
+    r31 = MemoryInline::FlatRead32((r1 + 44));
+    r30 = MemoryInline::FlatRead32((r1 + 40));
+    ctx->lr = r0;
+    r1 = (r1 + 64);
+    ctx->gpr[0] = r0;
+    ctx->gpr[1] = r1;
+    ctx->gpr[3] = r3;
+    ctx->gpr[4] = r4;
+    ctx->gpr[5] = r5;
+    ctx->gpr[30] = r30;
+    ctx->gpr[31] = r31;
+    ctx->fpr[0] = f0;
+    ctx->fpr[1] = f1;
+    ctx->fpr[2] = f2;
+    ctx->fpr[3] = f3;
+    ctx->fpr[4] = f4;
+    ctx->fpr[31] = f31;
+    ctx->cr = cr;
+    return;
+}
+
+}
+
+// RECOMP_GUEST_ABI gpr_read=0xC000001A gpr_write=0xC000003B gpr_return=0x00000018 fpr_read=0x80000002 fpr_write=0x8000001F fpr_return=0x00000002 cr_read=0x01 cr_write=0x01 xer_read=1 xer_write=0 fence=0
+// RECOMP_REGISTRATION base 0x80736BCC func_80736BCC preserves=true fpr_mask=0x00000000
