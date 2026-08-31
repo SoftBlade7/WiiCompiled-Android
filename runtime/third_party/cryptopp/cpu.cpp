@@ -69,9 +69,6 @@ unsigned long int getauxval(unsigned long int) { return 0; }
 // "$ANDROID_NDK_ROOT/sources/android/cpufeatures".
 // setenv-android.sh will copy the header and source file
 // into PWD and the makefile will build it in place.
-#if defined(__ANDROID__)
-# include "cpu-features.h"
-#endif
 
 #ifdef CRYPTOPP_GNU_STYLE_INLINE_ASSEMBLY
 # include <signal.h>
