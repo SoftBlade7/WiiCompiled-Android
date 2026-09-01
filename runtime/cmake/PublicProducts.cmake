@@ -72,8 +72,18 @@ add_library(mkw_runtime_common OBJECT ${SOURCES})
 mkw_configure_object_target(mkw_runtime_common)
 target_compile_features(mkw_runtime_common PRIVATE cxx_std_20)
 target_compile_definitions(mkw_runtime_common PRIVATE
-    SDL_MAIN_HANDLED
     _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION)
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
+    # SDL_MAIN_HANDLED tells <SDL3/SDL_main.h> (included by aurora-main/lib/main.cpp) to leave the
+    # project's own entry point named `main` instead of renaming it to `SDL_main`. That's correct
+    # for desktop, where the OS calls `main` directly - but Android's Java-side SDLActivity glue
+    # loads the .so and looks up the native entry point by the exact symbol name "SDL_main" via
+    # dlsym (see org/libsdl/app/SDLActivity.java). Defining SDL_MAIN_HANDLED unconditionally left
+    # Android builds with no SDL_main symbol at all: "nativeRunMain(): Couldn't find function
+    # SDL_main in library libwiicompiled.so". Leaving SDL_MAIN_HANDLED undefined on Android lets
+    # SDL3's macro machinery do the rename as intended.
+    target_compile_definitions(mkw_runtime_common PRIVATE SDL_MAIN_HANDLED)
+endif()
 target_link_libraries(mkw_runtime_common PRIVATE
     aurora::gx aurora::pad aurora::si aurora::vi aurora::mtx)
 target_link_libraries(mkw_runtime_common PRIVATE mkw::pugixml mkw::toml11 mkw::cryptopp)
@@ -185,7 +195,13 @@ function(mkw_configure_product target)
         "${MKW_RUNTIME_SOURCE_DIR}/.."
         "${MKW_RUNTIME_SOURCE_DIR}/../aurora-main/include")
     target_compile_definitions(${target} PRIVATE
-        SDL_MAIN_HANDLED _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION TARGET_PC)
+        _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION)
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
+        # See the matching guard on mkw_runtime_common above for why SDL_MAIN_HANDLED must not
+        # reach Android builds. TARGET_PC is bundled here because it's desktop-specific too -
+        # both were evidently meant as a PC-only pair and need the same guard.
+        target_compile_definitions(${target} PRIVATE SDL_MAIN_HANDLED TARGET_PC)
+    endif()
     target_compile_features(${target} PRIVATE cxx_std_20)
     mkw_apply_common_compile_options(${target})
     # The dispatch-table and registration shards compile inside the product target itself and
@@ -356,7 +372,4 @@ set(MKW_ALL_BUILD_TARGETS
     mkw_runtime_common mkw_base_shared mkw_base_sensitive mkw_retro_sensitive
     mkw_retro_rewind_functions WiiCompiled RetroRewind)
 foreach(target IN LISTS MKW_ALL_BUILD_TARGETS)
-    if(TARGET ${target} AND MKW_BASELINE_ARCH_FLAG)
-        target_compile_options(${target} PRIVATE ${MKW_BASELINE_ARCH_FLAG})
-    endif()
-endforeach()
+    if(TARGET ${
