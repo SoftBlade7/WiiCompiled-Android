@@ -44,7 +44,7 @@ android {
         cmake {
             // Points at the existing project root CMakeLists.txt (runtime/), not a
             // separate Android-only build script.
-            path "../../runtime/CMakeLists.txt"
+            path "../runtime/CMakeLists.txt"
             version "3.22.1"
         }
     }
@@ -71,11 +71,11 @@ android {
 // builds draw from one source of truth (runtime/assets/, generated/) instead of a
 // second hand-maintained copy living under app/src/main/assets/.
 tasks.register("copyGameAssets", Copy) {
-    from("${projectDir}/../../runtime/assets/wii") {
+    from("${projectDir}/../runtime/assets/wii") {
         into "wii_bootstrap"
     }
-    from "${projectDir}/../../runtime/assets/dsp/dsp_coef.bin"
-    from "${projectDir}/../../runtime/assets/pipeline/initial_pipeline_cache.db"
+    from "${projectDir}/../runtime/assets/dsp/dsp_coef.bin"
+    from "${projectDir}/../runtime/assets/pipeline/initial_pipeline_cache.db"
     into "${projectDir}/src/main/assets/game"
 }
 
