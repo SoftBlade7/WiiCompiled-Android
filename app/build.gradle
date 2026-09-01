@@ -1,26 +1,26 @@
 plugins {
-    id("com.android.application")
+    id 'com.android.application'
 }
 
 android {
-    namespace = "org.patchzyy.wiicompiled"
-    compileSdk = 34
+    namespace 'org.patchzyy.wiicompiled'
+    compileSdk 34
 
     defaultConfig {
-        applicationId = "org.patchzyy.wiicompiled"
+        applicationId "org.patchzyy.wiicompiled"
         // minSdk 30 matches ANDROID_PLATFORM=android-30 in runtime/CMakeLists.txt
         // (required for memfd_create - see guest_flat_memory.cpp).
-        minSdk = 30
-        targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        minSdk 30
+        targetSdk 34
+        versionCode 1
+        versionName "0.1.0"
 
         ndk {
             // Only aarch64 has been validated by CI (see .github/workflows/android.yml,
-            // runtime-ndk-configure job). Do not widen this until armeabi-v7a/x86_64
-            // have their own validated builds - the Crypto++ CPU-detection fix and the
-            // -mcpu=native baseline flag were verified for arm64-v8a specifically.
-            abiFilters += listOf("arm64-v8a")
+            // gradle-build job). Do not widen this until armeabi-v7a/x86_64 have their
+            // own validated builds - the Crypto++ CPU-detection fix and the -mcpu=native
+            // baseline flag were verified for arm64-v8a specifically.
+            abiFilters.add("arm64-v8a")
         }
 
         externalNativeBuild {
@@ -28,18 +28,15 @@ android {
                 // WiiCompiled/RetroRewind targets, ANDROID_PLATFORM, AURORA_DAWN_PROVIDER,
                 // etc. are all owned by runtime/CMakeLists.txt itself (same file the CI
                 // workflow configures) - nothing is duplicated here.
-                arguments += listOf(
-                    "-DANDROID_PLATFORM=android-30",
-                    "-DAURORA_DAWN_PROVIDER=package"
-                )
+                arguments "-DANDROID_PLATFORM=android-30", "-DAURORA_DAWN_PROVIDER=package"
             }
         }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 
@@ -47,14 +44,14 @@ android {
         cmake {
             // Points at the existing project root CMakeLists.txt (runtime/), not a
             // separate Android-only build script.
-            path = "../../runtime/CMakeLists.txt"
-            version = "3.22.1"
+            path "../../runtime/CMakeLists.txt"
+            version "3.22.1"
         }
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     // AGP validates that every asset referenced actually exists; wii_bootstrap/,
@@ -63,8 +60,8 @@ android {
     // committed twice, since runtime/assets/ already holds the source copies used
     // by the desktop build.
     sourceSets {
-        getByName("main") {
-            assets.srcDirs("src/main/assets")
+        main {
+            assets.srcDirs += "src/main/assets"
         }
     }
 }
@@ -73,17 +70,17 @@ android {
 // steps in runtime/cmake/PublicProducts.cmake already use, so Android and desktop
 // builds draw from one source of truth (runtime/assets/, generated/) instead of a
 // second hand-maintained copy living under app/src/main/assets/.
-tasks.register("copyGameAssets", Copy::class) {
+tasks.register("copyGameAssets", Copy) {
     from("${projectDir}/../../runtime/assets/wii") {
-        into("wii_bootstrap")
+        into "wii_bootstrap"
     }
-    from("${projectDir}/../../runtime/assets/dsp/dsp_coef.bin")
-    from("${projectDir}/../../runtime/assets/pipeline/initial_pipeline_cache.db")
-    into("${projectDir}/src/main/assets/game")
+    from "${projectDir}/../../runtime/assets/dsp/dsp_coef.bin"
+    from "${projectDir}/../../runtime/assets/pipeline/initial_pipeline_cache.db"
+    into "${projectDir}/src/main/assets/game"
 }
 
-tasks.named("preBuild") {
-    dependsOn("copyGameAssets")
+tasks.named("preBuild").configure {
+    dependsOn "copyGameAssets"
 }
 
 dependencies {
