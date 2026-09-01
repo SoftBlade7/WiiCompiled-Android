@@ -104,6 +104,39 @@ jobs:
           ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
         run: ./gradlew assembleDebug --stacktrace
 
+      # Direct evidence, not log archaeology: GitHub Actions silently drops/collapses
+      # huge verbose linker output before it reaches later lines, so CMAKE_VERBOSE_MAKEFILE
+      # could not actually show us the real link command for libwiicompiled.so. Checking the
+      # symbol table ourselves, at two points in the pipeline, tells us directly whether
+      # SDL_main survives (a) the link step itself and (b) AGP's later stripDebugDebugSymbols
+      # packaging step - narrowing down exactly where it's being lost.
+      - name: Check SDL_main symbol survives build and packaging
+        run: |
+          set -eu
+          echo "--- Searching for the raw .cxx build output (pre-strip) ---"
+          raw_so=$(find app/.cxx -name 'libwiicompiled.so' -path '*arm64-v8a*' | head -1)
+          if [ -z "$raw_so" ]; then
+            echo "::error::Could not find libwiicompiled.so anywhere under app/.cxx"
+            exit 1
+          fi
+          echo "Found: $raw_so"
+          echo "--- Dynamic symbol table entries matching SDL_main (pre-strip) ---"
+          "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm" -D "$raw_so" | grep -i SDL_main || echo "NOT FOUND in pre-strip .cxx output"
+
+          echo "--- Extracting from the packaged debug APK (post-strip) ---"
+          apk=$(find app/build/outputs/apk/debug -name '*.apk' | head -1)
+          if [ -z "$apk" ]; then
+            echo "::error::No debug APK found to inspect"
+            exit 1
+          fi
+          echo "Found: $apk"
+          mkdir -p /tmp/apk_check
+          unzip -p "$apk" lib/arm64-v8a/libwiicompiled.so > /tmp/apk_check/libwiicompiled.so
+          echo "--- Dynamic symbol table entries matching SDL_main (post-strip, packaged) ---"
+          "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm" -D /tmp/apk_check/libwiicompiled.so | grep -i SDL_main || echo "NOT FOUND in packaged APK"
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+
       - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@v4
@@ -163,3 +196,4 @@ jobs:
 
       - name: Run the ABI proof fixture under qemu-aarch64
         run: qemu-aarch64 ./abi_proof
+        
