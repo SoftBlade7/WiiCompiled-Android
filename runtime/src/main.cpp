@@ -1484,4 +1484,13 @@ int RuntimeMain(int argc, char** argv) {
 int main(int argc, char** argv) {
     return RuntimeMain(argc, argv);
 }
+#if defined(__ANDROID__)
+// Android's Java-side SDLActivity glue locates the native entry point purely via
+// dlsym(handle, "SDL_main") - it never calls "main" by name. Desktop platforms
+// (Windows/Linux) need the OS-standard "main" symbol above, and dlsym is irrelevant
+// there, so this wrapper is Android-only rather than replacing main() outright.
+extern "C" int SDL_main(int argc, char** argv) {
+    return RuntimeMain(argc, argv);
+}
+#endif
 extern "C" bool g_dynamicAspectRatioEnabled = false;
