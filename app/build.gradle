@@ -60,7 +60,12 @@ android {
             // Points at the existing project root CMakeLists.txt (runtime/), not a
             // separate Android-only build script.
             path "../runtime/CMakeLists.txt"
-            version "3.22.1"
+            // aurora-main's CMakeLists.txt (pulled in via add_subdirectory from
+            // runtime/CMakeLists.txt) requires CMake >= 3.25 - AGP's default managed
+            // CMake package (3.22.1) is too old and fails at the very first line of
+            // aurora-main/CMakeLists.txt with "CMake 3.25 or higher is required."
+            // 3.31.5 is a current SDK-distributed package version.
+            version "3.31.5"
         }
     }
 
