@@ -22,7 +22,7 @@ jobs:
         id: ndk
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r27c
+          ndk-version: r30c
           local-cache: false
 
       - name: Sanity-check NDK clang exists
@@ -121,7 +121,7 @@ jobs:
         id: ndk
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r27c
+          ndk-version: r30c
           local-cache: false
 
       # This fixture (translator/tests/fixtures/statefree_regcall_sret_proof.cpp) is
