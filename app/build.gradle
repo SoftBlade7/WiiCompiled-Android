@@ -1,0 +1,93 @@
+plugins {
+    id("com.android.application")
+}
+
+android {
+    namespace = "org.patchzyy.wiicompiled"
+    compileSdk = 34
+
+    defaultConfig {
+        applicationId = "org.patchzyy.wiicompiled"
+        // minSdk 30 matches ANDROID_PLATFORM=android-30 in runtime/CMakeLists.txt
+        // (required for memfd_create - see guest_flat_memory.cpp).
+        minSdk = 30
+        targetSdk = 34
+        versionCode = 1
+        versionName = "0.1.0"
+
+        ndk {
+            // Only aarch64 has been validated by CI (see .github/workflows/android.yml,
+            // runtime-ndk-configure job). Do not widen this until armeabi-v7a/x86_64
+            // have their own validated builds - the Crypto++ CPU-detection fix and the
+            // -mcpu=native baseline flag were verified for arm64-v8a specifically.
+            abiFilters += listOf("arm64-v8a")
+        }
+
+        externalNativeBuild {
+            cmake {
+                // WiiCompiled/RetroRewind targets, ANDROID_PLATFORM, AURORA_DAWN_PROVIDER,
+                // etc. are all owned by runtime/CMakeLists.txt itself (same file the CI
+                // workflow configures) - nothing is duplicated here.
+                arguments += listOf(
+                    "-DANDROID_PLATFORM=android-30",
+                    "-DAURORA_DAWN_PROVIDER=package"
+                )
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            // Points at the existing project root CMakeLists.txt (runtime/), not a
+            // separate Android-only build script.
+            path = "../../runtime/CMakeLists.txt"
+            version = "3.22.1"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    // AGP validates that every asset referenced actually exists; wii_bootstrap/,
+    // dsp_coef.bin and initial_pipeline_cache.db are staged into
+    // app/src/main/assets/ by a Gradle task (see copyGameAssets below) rather than
+    // committed twice, since runtime/assets/ already holds the source copies used
+    // by the desktop build.
+    sourceSets {
+        getByName("main") {
+            assets.srcDirs("src/main/assets")
+        }
+    }
+}
+
+// Stage the same asset files the desktop POST_BUILD copy_directory/copy_if_different
+// steps in runtime/cmake/PublicProducts.cmake already use, so Android and desktop
+// builds draw from one source of truth (runtime/assets/, generated/) instead of a
+// second hand-maintained copy living under app/src/main/assets/.
+tasks.register("copyGameAssets", Copy::class) {
+    from("${projectDir}/../../runtime/assets/wii") {
+        into("wii_bootstrap")
+    }
+    from("${projectDir}/../../runtime/assets/dsp/dsp_coef.bin")
+    from("${projectDir}/../../runtime/assets/pipeline/initial_pipeline_cache.db")
+    into("${projectDir}/src/main/assets/game")
+}
+
+tasks.named("preBuild") {
+    dependsOn("copyGameAssets")
+}
+
+dependencies {
+    // SDL3 is already vendored/fetched by aurora-main for the native side; no
+    // separate Java-side SDL dependency is needed beyond the SDLActivity source
+    // (added directly under src/main/java, see org/libsdl/app/).
+}
