@@ -1,4 +1,4 @@
-﻿# Public WiiCompiled product graph.
+# Public WiiCompiled product graph.
 #
 # The translator owns the translated build graph. Mario Kart's profile-neutral
 # functions are compiled once into mkw_base_shared; only callers whose direct
@@ -245,39 +245,59 @@ function(mkw_configure_product target)
         endforeach()
     endif()
 
-    set(MKW_WII_BOOTSTRAP_SOURCE_DIR "${MKW_RUNTIME_SOURCE_DIR}/assets/wii")
-    if(NOT EXISTS "${MKW_WII_BOOTSTRAP_SOURCE_DIR}/shared2/wc24")
-        message(FATAL_ERROR "Missing Wii first-run bootstrap payload: ${MKW_WII_BOOTSTRAP_SOURCE_DIR}")
-    endif()
-    add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${MKW_WII_BOOTSTRAP_SOURCE_DIR}" "$<TARGET_FILE_DIR:${target}>/wii_bootstrap")
+    # Android has no writable directory "next to" the .so - it ends up inside
+    # the APK's lib/ tree, which is not a meaningful runtime path. These files
+    # are staged into the APK's assets/ instead and copied into app-private
+    # storage on first launch (see app/src/main/java/.../AssetExtractor.java),
+    # which replicates what these POST_BUILD steps do for desktop, so the
+    # steps themselves are only meaningful - and only run - off Android.
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
+        set(MKW_WII_BOOTSTRAP_SOURCE_DIR "${MKW_RUNTIME_SOURCE_DIR}/assets/wii")
+        if(NOT EXISTS "${MKW_WII_BOOTSTRAP_SOURCE_DIR}/shared2/wc24")
+            message(FATAL_ERROR "Missing Wii first-run bootstrap payload: ${MKW_WII_BOOTSTRAP_SOURCE_DIR}")
+        endif()
+        add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${MKW_WII_BOOTSTRAP_SOURCE_DIR}" "$<TARGET_FILE_DIR:${target}>/wii_bootstrap")
 
-    set(MKW_DSP_COEFFICIENT_ROM "${MKW_RUNTIME_SOURCE_DIR}/assets/dsp/dsp_coef.bin")
-    if(NOT EXISTS "${MKW_DSP_COEFFICIENT_ROM}")
-        message(FATAL_ERROR "Missing Wii DSP coefficient ROM: ${MKW_DSP_COEFFICIENT_ROM}")
-    endif()
-    file(SHA256 "${MKW_DSP_COEFFICIENT_ROM}" MKW_DSP_COEFFICIENT_ROM_SHA256)
-    if(NOT MKW_DSP_COEFFICIENT_ROM_SHA256 STREQUAL
-       "d7741279c2e8ec5c5fb318f8fbdd6de6bf583520d288e836a5383233a4238179")
-        message(FATAL_ERROR "Wii DSP coefficient ROM hash mismatch: ${MKW_DSP_COEFFICIENT_ROM_SHA256}")
-    endif()
-    add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${MKW_DSP_COEFFICIENT_ROM}" "$<TARGET_FILE_DIR:${target}>/dsp_coef.bin")
+        set(MKW_DSP_COEFFICIENT_ROM "${MKW_RUNTIME_SOURCE_DIR}/assets/dsp/dsp_coef.bin")
+        if(NOT EXISTS "${MKW_DSP_COEFFICIENT_ROM}")
+            message(FATAL_ERROR "Missing Wii DSP coefficient ROM: ${MKW_DSP_COEFFICIENT_ROM}")
+        endif()
+        file(SHA256 "${MKW_DSP_COEFFICIENT_ROM}" MKW_DSP_COEFFICIENT_ROM_SHA256)
+        if(NOT MKW_DSP_COEFFICIENT_ROM_SHA256 STREQUAL
+           "d7741279c2e8ec5c5fb318f8fbdd6de6bf583520d288e836a5383233a4238179")
+            message(FATAL_ERROR "Wii DSP coefficient ROM hash mismatch: ${MKW_DSP_COEFFICIENT_ROM_SHA256}")
+        endif()
+        add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${MKW_DSP_COEFFICIENT_ROM}" "$<TARGET_FILE_DIR:${target}>/dsp_coef.bin")
 
-    # Aurora imports this portable recipe database into each user's writable
-    # pipeline cache. Keep the upstream filename so its default resourcesPath
-    # lookup works without application-specific configuration.
-    set(MKW_INITIAL_PIPELINE_CACHE
-        "${MKW_RUNTIME_SOURCE_DIR}/assets/pipeline/initial_pipeline_cache.db")
-    if(NOT EXISTS "${MKW_INITIAL_PIPELINE_CACHE}")
-        message(FATAL_ERROR "Missing transferable Aurora pipeline cache: ${MKW_INITIAL_PIPELINE_CACHE}")
+        # Aurora imports this portable recipe database into each user's writable
+        # pipeline cache. Keep the upstream filename so its default resourcesPath
+        # lookup works without application-specific configuration.
+        set(MKW_INITIAL_PIPELINE_CACHE
+            "${MKW_RUNTIME_SOURCE_DIR}/assets/pipeline/initial_pipeline_cache.db")
+        if(NOT EXISTS "${MKW_INITIAL_PIPELINE_CACHE}")
+            message(FATAL_ERROR "Missing transferable Aurora pipeline cache: ${MKW_INITIAL_PIPELINE_CACHE}")
+        endif()
+        add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${MKW_INITIAL_PIPELINE_CACHE}"
+            "$<TARGET_FILE_DIR:${target}>/initial_pipeline_cache.db")
     endif()
-    add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${MKW_INITIAL_PIPELINE_CACHE}"
-        "$<TARGET_FILE_DIR:${target}>/initial_pipeline_cache.db")
 endfunction()
 
-add_executable(WiiCompiled "${MKW_BASE_PRODUCT_SOURCE}" ${MKW_BASE_REGISTRATION_SOURCES})
+# Android needs loadable .so files - JNI loads a shared library into the
+# Android-hosted process via System.loadLibrary(), it cannot launch a
+# standalone executable the way a desktop OS does. Every other platform keeps
+# building real executables, unchanged. OUTPUT_NAME is set explicitly since
+# both products would otherwise both produce an ambiguous default name; the
+# Java-side chooser activity (GameActivity.getLibraries()) selects between
+# them by exactly these names.
+if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    add_library(WiiCompiled SHARED "${MKW_BASE_PRODUCT_SOURCE}" ${MKW_BASE_REGISTRATION_SOURCES})
+    set_target_properties(WiiCompiled PROPERTIES OUTPUT_NAME "wiicompiled")
+else()
+    add_executable(WiiCompiled "${MKW_BASE_PRODUCT_SOURCE}" ${MKW_BASE_REGISTRATION_SOURCES})
+endif()
 mkw_configure_product(WiiCompiled)
 target_precompile_headers(WiiCompiled PRIVATE
     "${MKW_RUNTIME_SOURCE_DIR}/include/mkw_pch.h")
@@ -286,7 +306,12 @@ if(TARGET mkw_base_sensitive)
 endif()
 
 if(MKW_HAVE_RETRO_REWIND)
-    add_executable(RetroRewind "${MKW_RETRO_REWIND_PRODUCT_SOURCE}" ${MKW_RETRO_REGISTRATION_SOURCES})
+    if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+        add_library(RetroRewind SHARED "${MKW_RETRO_REWIND_PRODUCT_SOURCE}" ${MKW_RETRO_REGISTRATION_SOURCES})
+        set_target_properties(RetroRewind PROPERTIES OUTPUT_NAME "retrorewind")
+    else()
+        add_executable(RetroRewind "${MKW_RETRO_REWIND_PRODUCT_SOURCE}" ${MKW_RETRO_REGISTRATION_SOURCES})
+    endif()
     mkw_configure_product(RetroRewind)
     target_precompile_headers(RetroRewind REUSE_FROM WiiCompiled)
     if(TARGET mkw_retro_sensitive)
@@ -320,11 +345,6 @@ endif()
 set(MKW_ALL_BUILD_TARGETS
     mkw_runtime_common mkw_base_shared mkw_base_sensitive mkw_retro_sensitive
     mkw_retro_rewind_functions WiiCompiled RetroRewind)
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64|X86_64)$")
-    set(MKW_BASELINE_ARCH_FLAG -march=x86-64-v3)
-else()
-    set(MKW_BASELINE_ARCH_FLAG "")
-endif()
 foreach(target IN LISTS MKW_ALL_BUILD_TARGETS)
     if(TARGET ${target} AND MKW_BASELINE_ARCH_FLAG)
         target_compile_options(${target} PRIVATE ${MKW_BASELINE_ARCH_FLAG})
