@@ -6,6 +6,13 @@ android {
     namespace 'org.patchzyy.wiicompiled'
     compileSdk 34
 
+    // Must match the ndk-version set in .github/workflows/android.yml's
+    // nttld/setup-ndk step. Without this, AGP silently installs and uses its
+    // own default NDK (seen as 26.1.10909125 in CI logs) instead of r27c -
+    // the version the Crypto++ cpu.cpp and memfd_create/android-30 fixes
+    // were actually validated against.
+    ndkVersion "27.2.12479018"
+
     defaultConfig {
         applicationId "org.patchzyy.wiicompiled"
         // minSdk 30 matches ANDROID_PLATFORM=android-30 in runtime/CMakeLists.txt
