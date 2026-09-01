@@ -7,16 +7,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  runtime-ndk-configure:
-    name: runtime/ configure+build (aarch64, NDK)
+  gradle-build:
+    name: app/ Gradle build (aarch64, NDK, both products)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
 
-      - name: Install Ninja
-        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
 
       - name: Set up Android NDK
         id: ndk
@@ -24,12 +27,6 @@ jobs:
         with:
           ndk-version: r27c
           local-cache: false
-
-      - name: Sanity-check NDK clang exists
-        run: |
-          set -eu
-          ls -la "${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/" | head -20
-          "${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/clang" --version
 
       - name: Check for translator-generated shard manifest
         run: |
@@ -43,7 +40,9 @@ jobs:
       # Translator.Cli always writes shards.cmake with the emitting machine's
       # absolute paths baked in (see CMakePath() in TranslatedBuildShardEmitter.cs) -
       # it has no relative-path mode. Rewrite the Windows prefix from local
-      # translation to this runner's actual checkout path before configuring.
+      # translation to this runner's actual checkout path before Gradle invokes
+      # CMake (app/build.gradle points externalNativeBuild.cmake.path at
+      # runtime/CMakeLists.txt, which include()s this manifest).
       - name: Rewrite absolute paths in shards.cmake for this runner
         run: |
           set -eu
@@ -82,9 +81,6 @@ jobs:
             exit 1
           fi
 
-          # MSVC/COFF section directive -> ELF equivalent. .rdata is COFF's
-          # read-only data section; .rodata + "a" (allocatable, non-writable,
-          # non-executable) is the ELF analogue Clang's integrated assembler expects.
           section_before=$(grep -c '\.section \.rdata,"dr"' "$asm" || true)
           echo "Occurrences of MSVC .rdata section directive before rewrite: $section_before"
           sed -i 's/\.section \.rdata,"dr"/.section .rodata,"a"/' "$asm"
@@ -95,38 +91,36 @@ jobs:
             exit 1
           fi
 
-      - name: Configure runtime/ against the NDK toolchain (aarch64)
-        run: |
-          set -eu
-          cmake -S runtime -B build/android-arm64 -G Ninja \
-            -DCMAKE_TOOLCHAIN_FILE="${{ steps.ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake" \
-            -DANDROID_ABI=arm64-v8a \
-            -DANDROID_PLATFORM=android-30 \
-            -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DAURORA_DAWN_PROVIDER=package
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
-      - name: Build runtime/ (aarch64)
-        run: cmake --build build/android-arm64 --config Release
+      # ANDROID_HOME/ANDROID_SDK_ROOT are pre-set by the GitHub-hosted runner
+      # image; app/build.gradle's externalNativeBuild.cmake block drives the
+      # same NDK toolchain configuration the old raw-CMake job passed by hand
+      # (ANDROID_PLATFORM, AURORA_DAWN_PROVIDER=package), now owned in one
+      # place instead of duplicated between this workflow and Gradle.
+      - name: Build debug APK (both WiiCompiled and RetroRewind products)
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        run: ./gradlew assembleDebug --stacktrace
 
-      - name: Upload built runtime artifacts
+      - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: wiicompiled-android-arm64
-          path: |
-            build/android-arm64/*.so
-            build/android-arm64/**/*.so
+          name: wiicompiled-android-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: warn
 
-      - name: Upload configure/build logs on failure
+      - name: Upload Gradle/CMake logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: android-configure-logs
+          name: android-gradle-build-logs
           path: |
-            build/android-arm64/CMakeFiles/CMakeError.log
-            build/android-arm64/CMakeFiles/CMakeOutput.log
+            app/build/.cxx/**/CMakeError.log
+            app/build/.cxx/**/CMakeOutput.log
+          if-no-files-found: ignore
 
   abi-proof-ndk:
     name: statefree_regcall_sret_proof (aarch64, NDK, no game data)
