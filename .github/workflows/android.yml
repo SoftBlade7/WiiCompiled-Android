@@ -58,21 +58,40 @@ jobs:
             exit 1
           fi
 
-      # Translator.Cli always writes shards.cmake with the emitting machine's
-      # absolute paths baked in (see CMakePath() in TranslatedBuildShardEmitter.cs) -
-      # it has no relative-path mode. Rewrite the Windows prefix from local
-      # translation to this runner's actual checkout path before configuring.
-      - name: Rewrite absolute paths in shards.cmake for this runner
+      # Translator.Cli also emits generated/data_sections_init_blobs.S with the
+      # same emitting-machine absolute paths baked into its .incbin directives,
+      # plus MSVC/COFF section syntax (.section .rdata,"dr") that Clang's
+      # integrated assembler doesn't accept on ELF targets. Rewrite both before
+      # this file reaches the assembler.
+      - name: Rewrite generated data_sections_init_blobs.S for this runner
         run: |
           set -eu
-          shards="generated/build_shards/shards.cmake"
-          before=$(grep -c "C:/Users/SoftBlade/Desktop/wiicompiled/compiled/BuildWorkspace/generated" "$shards" || true)
+          asm="generated/data_sections_init_blobs.S"
+          if [ ! -f "$asm" ]; then
+            echo "::error::${asm} is missing. Run Translator.Cli emit-build-shards locally against your own disc dump, then commit the generated/ output to this fork before this job can build the actual game runtime."
+            exit 1
+          fi
+
+          before=$(grep -c "C:/Users/SoftBlade/Desktop/wiicompiled/compiled/BuildWorkspace/generated" "$asm" || true)
           echo "Occurrences of the local Windows prefix before rewrite: $before"
-          sed -i "s#C:/Users/SoftBlade/Desktop/wiicompiled/compiled/BuildWorkspace/generated#${GITHUB_WORKSPACE}/generated#g" "$shards"
-          after=$(grep -c "C:/Users/SoftBlade/Desktop/wiicompiled/compiled/BuildWorkspace/generated" "$shards" || true)
-          echo "Occurrences remaining after rewrite: $after"
+          sed -i "s#C:/Users/SoftBlade/Desktop/wiicompiled/compiled/BuildWorkspace/generated#${GITHUB_WORKSPACE}/generated#g" "$asm"
+          after=$(grep -c "C:/Users/SoftBlade/Desktop/wiicompiled/compiled/BuildWorkspace/generated" "$asm" || true)
+          echo "Occurrences of the local Windows prefix remaining after path rewrite: $after"
           if [ "$after" -ne 0 ]; then
-            echo "::error::Rewrite left $after unmatched occurrences - check for other path variants in shards.cmake."
+            echo "::error::Rewrite left $after unmatched incbin path occurrences - check for other path variants in data_sections_init_blobs.S."
+            exit 1
+          fi
+
+          # MSVC/COFF section directive -> ELF equivalent. .rdata is COFF's
+          # read-only data section; .rodata + "a" (allocatable, non-writable,
+          # non-executable) is the ELF analogue Clang's integrated assembler expects.
+          section_before=$(grep -c '\.section \.rdata,"dr"' "$asm" || true)
+          echo "Occurrences of MSVC .rdata section directive before rewrite: $section_before"
+          sed -i 's/\.section \.rdata,"dr"/.section .rodata,"a"/' "$asm"
+          section_after=$(grep -c '\.section \.rdata,"dr"' "$asm" || true)
+          echo "Occurrences of MSVC .rdata section directive remaining after rewrite: $section_after"
+          if [ "$section_after" -ne 0 ]; then
+            echo "::error::Rewrite left $section_after unmatched .rdata section directives in data_sections_init_blobs.S."
             exit 1
           fi
 
