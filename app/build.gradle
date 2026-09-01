@@ -107,6 +107,4 @@ dependencies {
     // SDL3 is already vendored/fetched by aurora-main for the native side; no
     // separate Java-side SDL dependency is needed beyond the SDLActivity source
     // (added directly under src/main/java, see org/libsdl/app/).
-    // separate Java-side SDL dependency is needed beyond the SDLActivity source
-    // (added directly under src/main/java, see org/libsdl/app/).
 }
