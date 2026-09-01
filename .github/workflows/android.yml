@@ -130,6 +130,45 @@ jobs:
         env:
           ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
 
+      # Direct evidence for which Dawn provider was ACTUALLY used, not which one we intended -
+      # we've been burned twice already (SDL_MAIN_HANDLED, then this) by a source-level fix not
+      # actually reaching the built artifact. Checks three independent signals: (1) the resolved
+      # AURORA_DAWN_PROVIDER value CMake actually cached, (2) whether Dawn's source was fetched
+      # for building (vendor) vs a prebuilt archive was downloaded (package), (3) whether the
+      # final .so has any external Dawn shared-library dependency at all (vendor+static, the
+      # cross-compiling default, should statically link Dawn in with zero external NEEDED entries
+      # for it).
+      - name: Check which Dawn provider was actually used
+        run: |
+          set -eu
+          echo "--- Resolved AURORA_DAWN_PROVIDER in CMakeCache.txt ---"
+          cache=$(find app/.cxx -name 'CMakeCache.txt' | head -1)
+          if [ -z "$cache" ]; then
+            echo "::warning::No CMakeCache.txt found under app/.cxx"
+          else
+            echo "Found: $cache"
+            grep -i "AURORA_DAWN_PROVIDER" "$cache" || echo "AURORA_DAWN_PROVIDER not present in cache at all"
+          fi
+
+          echo ""
+          echo "--- Dawn-related directories under _deps (vendor = dawn-src present; package = a prebuilt archive dir instead) ---"
+          find app/.cxx -maxdepth 8 -iname "*dawn*" -type d 2>/dev/null
+
+          echo ""
+          echo "--- Dynamic dependencies (NEEDED) of the built libwiicompiled.so - vendor+static should show no external Dawn .so ---"
+          so_path=$(find app/.cxx -name 'libwiicompiled.so' 2>/dev/null | head -1)
+          if [ -z "$so_path" ]; then
+            so_path=$(find app/build/intermediates -name 'libwiicompiled.so' 2>/dev/null | head -1)
+          fi
+          if [ -z "$so_path" ]; then
+            echo "::warning::No libwiicompiled.so found to inspect"
+          else
+            echo "Found: $so_path"
+            "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -d "$so_path" | grep -i "NEEDED" || echo "No NEEDED entries at all"
+          fi
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+
       - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@v4
