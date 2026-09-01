@@ -114,7 +114,13 @@ jobs:
         run: |
           set -eu
           echo "--- Searching for the raw .cxx build output (pre-strip) ---"
-          raw_so=$(find app/.cxx -name 'libwiicompiled.so' -path '*arm64-v8a*' | head -1)
+          raw_so=$(find app/.cxx -name 'libwiicompiled.so' 2>/dev/null | head -1)
+          if [ -z "$raw_so" ]; then
+            echo "::warning::Could not find libwiicompiled.so under app/.cxx by exact name - listing the actual .cxx tree so we can see the real layout:"
+            find app/.cxx -maxdepth 6 -type d
+            echo "--- Every .so anywhere under app/.cxx ---"
+            find app/.cxx -name '*.so' 2>/dev/null
+          fi
           if [ -z "$raw_so" ]; then
             echo "::error::Could not find libwiicompiled.so anywhere under app/.cxx"
             exit 1
