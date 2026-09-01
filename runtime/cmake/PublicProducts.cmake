@@ -329,15 +329,25 @@ endif()
 
 # x86-64-v3 (SSE3/SSSE3/SSE4.1/FMA/AVX2/BMI2) is the baseline runtime/src/host_cpu_baseline.cpp
 # guards against - a fixed, portable floor since an x86_64 build may run on a different machine
-# than the one that built it. AArch64 has no such redistribution path here: every build this
-# project produces runs only on the machine that built it (local-build.sh, and the AppImage which
-# wraps it, always build from source on the target), so -mcpu=native is safe and strictly better -
-# real per-core tuning (scheduling, whatever NEON/atomic extensions that exact CPU actually has)
-# instead of the generic armv8-a baseline Clang would otherwise assume.
+# than the one that built it. On desktop AArch64 there's no such redistribution path: every build
+# this project produces there runs only on the machine that built it (local-build.sh, and the
+# AppImage which wraps it, always build from source on the target), so -mcpu=native is safe and
+# strictly better - real per-core tuning instead of the generic armv8-a baseline Clang would
+# otherwise assume.
+#
+# Android is a different story even though CMAKE_SYSTEM_PROCESSOR still reads aarch64: the NDK
+# toolchain cross-compiles from an x86_64 CI/dev host for a target device that isn't the machine
+# doing the compiling, so -mcpu=native has no CPU to detect and Clang hard-errors ("unsupported
+# argument 'native' to option '-mcpu='"). Use a portable armv8-a baseline there instead, matching
+# the same "fixed floor, not per-machine tuning" approach already used for x86_64.
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64|X86_64)$")
     set(MKW_BASELINE_ARCH_FLAG -march=x86-64-v3)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$")
-    set(MKW_BASELINE_ARCH_FLAG -mcpu=native)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Android" OR CMAKE_CROSSCOMPILING)
+        set(MKW_BASELINE_ARCH_FLAG -march=armv8-a)
+    else()
+        set(MKW_BASELINE_ARCH_FLAG -mcpu=native)
+    endif()
 else()
     set(MKW_BASELINE_ARCH_FLAG "")
 endif()
