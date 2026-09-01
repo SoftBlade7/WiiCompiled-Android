@@ -35,7 +35,15 @@ android {
                 // WiiCompiled/RetroRewind targets, ANDROID_PLATFORM, AURORA_DAWN_PROVIDER,
                 // etc. are all owned by runtime/CMakeLists.txt itself (same file the CI
                 // workflow configures) - nothing is duplicated here.
-                arguments "-DANDROID_PLATFORM=android-30", "-DAURORA_DAWN_PROVIDER=package"
+                //
+                // CMAKE_BUILD_TYPE=Release is forced here because runtime/CMakeLists.txt
+                // hard-errors on any other build type ("WiiCompiled only supports Release
+                // builds", CMakeLists.txt:14). AGP's assembleDebug variant otherwise passes
+                // CMAKE_BUILD_TYPE=Debug to configureCMakeDebug by convention - this
+                // override keeps the underlying native build Release regardless of which
+                // Gradle build variant (debug/release) triggers it, without touching the
+                // shared CMakeLists.txt that the desktop build also uses.
+                arguments "-DANDROID_PLATFORM=android-30", "-DAURORA_DAWN_PROVIDER=package", "-DCMAKE_BUILD_TYPE=Release"
             }
         }
     }
