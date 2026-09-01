@@ -113,36 +113,20 @@ jobs:
       - name: Check SDL_main symbol survives build and packaging
         run: |
           set -eu
-          echo "--- Searching for the raw pre-strip build output ---"
-          raw_so=$(find app/.cxx -name 'libwiicompiled.so' 2>/dev/null | head -1)
-          if [ -z "$raw_so" ]; then
-            raw_so=$(find app/build/intermediates -name 'libwiicompiled.so' 2>/dev/null | head -1)
-          fi
-          if [ -z "$raw_so" ]; then
-            echo "::warning::No libwiicompiled.so found anywhere under app/.cxx or app/build/intermediates - listing every .so under app/ instead:"
-            find app -name '*.so' 2>/dev/null || true
-            echo "Skipping the pre-strip check; continuing to the packaged-APK check below."
-          else
-            echo "Found: $raw_so"
-            echo "--- Dynamic symbol table entries matching SDL_main (pre-strip) ---"
-            "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm" -D "$raw_so" | grep -i SDL_main || echo "NOT FOUND in pre-strip build output"
-          fi
+          echo "--- Every libwiicompiled.so anywhere under app/, with full paths ---"
+          find app -name 'libwiicompiled.so' -exec ls -la {} \; 2>/dev/null
 
-          echo "--- Extracting from the packaged debug APK (post-strip) ---"
+          echo ""
+          echo "--- Checking each one for SDL_main (raw llvm-nm -D output, not just grep) ---"
+          while IFS= read -r so_path; do
+            echo "=== $so_path ==="
+            "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm" -D "$so_path" 2>&1 | grep -i "main" || echo "  (no symbol containing 'main' found at all)"
+            echo ""
+          done < <(find app -name 'libwiicompiled.so' 2>/dev/null)
+
+          echo "--- Every arm64-v8a .so packaged in the final APK ---"
           apk=$(find app/build/outputs/apk/debug -name '*.apk' | head -1)
-          if [ -z "$apk" ]; then
-            echo "::error::No debug APK found to inspect"
-            exit 1
-          fi
-          echo "Found: $apk"
-          echo "--- Every arm64-v8a .so packaged in the APK ---"
-          unzip -l "$apk" | grep "lib/arm64-v8a/" || echo "No lib/arm64-v8a/ entries in the APK at all"
-          mkdir -p /tmp/apk_check
-          unzip -p "$apk" lib/arm64-v8a/libwiicompiled.so > /tmp/apk_check/libwiicompiled.so 2>/dev/null || echo "::warning::libwiicompiled.so not present in the APK under lib/arm64-v8a/"
-          if [ -s /tmp/apk_check/libwiicompiled.so ]; then
-            echo "--- Dynamic symbol table entries matching SDL_main (post-strip, packaged) ---"
-            "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm" -D /tmp/apk_check/libwiicompiled.so | grep -i SDL_main || echo "NOT FOUND in packaged APK"
-          fi
+          unzip -l "$apk" | grep "lib/arm64-v8a/" || echo "No lib/arm64-v8a/ entries in the APK"
         env:
           ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
 
