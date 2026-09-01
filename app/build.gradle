@@ -43,7 +43,12 @@ android {
                 // override keeps the underlying native build Release regardless of which
                 // Gradle build variant (debug/release) triggers it, without touching the
                 // shared CMakeLists.txt that the desktop build also uses.
-                arguments "-DANDROID_PLATFORM=android-30", "-DAURORA_DAWN_PROVIDER=package", "-DCMAKE_BUILD_TYPE=Release"
+                // CMAKE_VERBOSE_MAKEFILE=ON makes ninja print full compile/link command lines
+                // instead of just per-file status - needed to directly verify which flags
+                // actually reach the linker for libwiicompiled.so (SDL_main has gone missing
+                // from the final .so despite being present in source and CMake target options,
+                // and ninja's default quiet output gives no way to see the real link command).
+                arguments "-DANDROID_PLATFORM=android-30", "-DAURORA_DAWN_PROVIDER=package", "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_VERBOSE_MAKEFILE=ON"
             }
         }
     }
