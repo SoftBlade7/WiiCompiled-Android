@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "WiiCompiled-Android"
-include(":app")
+include ':app' // Changed from include(":app") to Groovy syntax
