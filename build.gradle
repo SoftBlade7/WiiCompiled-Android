@@ -1,0 +1,5 @@
+// Top-level build file. Individual module build files (app/build.gradle)
+// declare their own dependencies; nothing project-wide needed yet.
+plugins {
+    id("com.android.application") version "8.5.2" apply false
+}
