@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- App-private storage extraction target (Context.getFilesDir()) needs no
+         special permission. WRITE/READ_EXTERNAL_STORAGE are deliberately NOT
+         requested - AssetExtractor only ever writes to app-private storage. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- network_ios / DWC-related code (see runtime_group "network_ios" bucketing
+         in runtime/cmake/PublicProducts.cmake) needs outbound network access. -->
+
+    <uses-feature
+        android:glEsVersion="0x00030002"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+
+    <application
+        android:allowBackup="false"
+        android:label="WiiCompiled"
+        android:hardwareAccelerated="true"
+        android:supportsRtl="true">
+
+        <!-- Real launcher entry point: lets the user pick WiiCompiled or
+             RetroRewind, mirroring the two separate .exe files the desktop
+             build produces. See ChooserActivity's own header comment. -->
+        <activity
+            android:name="org.patchzyy.wiicompiled.ChooserActivity"
+            android:label="WiiCompiled"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoTitleBar">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Not a launcher entry - only ever started by ChooserActivity with
+             EXTRA_LIBRARY_NAME set. Hosts SDL's native game loop. -->
+        <activity
+            android:name="org.patchzyy.wiicompiled.GameActivity"
+            android:label="WiiCompiled"
+            android:alwaysRetainTaskState="true"
+            android:launchMode="singleInstance"
+            android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen" />
+
+    </application>
+</manifest>
