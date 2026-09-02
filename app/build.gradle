@@ -32,9 +32,31 @@ android {
 
         externalNativeBuild {
             cmake {
-                // WiiCompiled/RetroRewind targets, ANDROID_PLATFORM, AURORA_DAWN_PROVIDER,
-                // etc. are all owned by runtime/CMakeLists.txt itself (same file the CI
-                // workflow configures) - nothing is duplicated here.
+                // WiiCompiled/RetroRewind targets, ANDROID_PLATFORM, etc. are all owned by
+                // runtime/CMakeLists.txt itself (same file the CI workflow configures) -
+                // nothing is duplicated here.
+                //
+                // AURORA_DAWN_PROVIDER=vendor forces aurora-main/cmake/AuroraDawnProvider.cmake
+                // to build Dawn from source instead of fetching a prebuilt package. This is
+                // required on Android: the "package" provider only has prebuilt archives for
+                // windows/linux/darwin desktop targets (see _has_package's platform check in
+                // AuroraDawnProvider.cmake), so it was previously linking a desktop-built Dawn
+                // binary, which built and ran but used the wrong native graphics backend at
+                // runtime - this is what caused the on-device GetGpuPixelFormat/
+                // GraphicBufferAllocator/Gralloc4 "Unknown Format"/"failed to allocate" failures
+                // after SDL_main started successfully.
+                //
+                // AURORA_DAWN_VERSION must be pinned explicitly alongside PROVIDER=vendor.
+                // AuroraDawnProvider.cmake's vendor path fetches
+                // https://github.com/google/dawn/archive/refs/tags/${AURORA_DAWN_VERSION}.tar.gz
+                // directly, reusing the SAME variable the "package" provider uses for its
+                // encounter/dawn-build release tag - the two providers are not independently
+                // versioned. Whatever AURORA_DAWN_VERSION defaults to elsewhere in this project
+                // was set for the "package" tag scheme and is not guaranteed to exist as a real
+                // google/dawn release tag (v20260603.191052 didn't - 404). v20260819.212523 is
+                // confirmed to exist as a real google/dawn release as of 2026-08-20; if vendor
+                // builds start failing again with a download 404, check
+                // https://github.com/google/dawn/releases for a current tag and bump this.
                 //
                 // CMAKE_BUILD_TYPE=Release is forced here because runtime/CMakeLists.txt
                 // hard-errors on any other build type ("WiiCompiled only supports Release
@@ -43,7 +65,7 @@ android {
                 // override keeps the underlying native build Release regardless of which
                 // Gradle build variant (debug/release) triggers it, without touching the
                 // shared CMakeLists.txt that the desktop build also uses.
-                arguments "-DANDROID_PLATFORM=android-30", "-DAURORA_DAWN_PROVIDER=vendor", "-DCMAKE_BUILD_TYPE=Release"
+                arguments "-DANDROID_PLATFORM=android-30", "-DAURORA_DAWN_PROVIDER=vendor", "-DAURORA_DAWN_VERSION=v20260819.212523", "-DCMAKE_BUILD_TYPE=Release"
             }
         }
     }
