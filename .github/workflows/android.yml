@@ -158,8 +158,22 @@ jobs:
             -Dprotobuf_BUILD_LIBPROTOC=ON
           cmake --build /tmp/protoc-host-build --target protoc -j"$(nproc)"
           find /tmp/protoc-host-build -name protoc -type f -exec chmod +x {} \;
-          find /tmp/protoc-host-build -name protoc -type f
-          echo "PROTOC_EXECUTABLE=$(find /tmp/protoc-host-build -name protoc -type f | head -1)" >> "$GITHUB_ENV"
+          PROTOC_PATH="$(find /tmp/protoc-host-build -name protoc -type f | head -1)"
+          echo "Host protoc built at: $PROTOC_PATH"
+          "$PROTOC_PATH" --version
+          echo "PROTOC_EXECUTABLE=$PROTOC_PATH" >> "$GITHUB_ENV"
+          # Also put it on PATH under the plain name "protoc": Dawn's own
+          # third_party/google/protobuf codegen (the well-known types, e.g.
+          # any.pb.cc) uses CMake's standard protobuf_generate(), which
+          # resolves protoc via the protobuf::protoc imported target /
+          # find_program(), NOT via Dawn's PROTOC_EXECUTABLE cache variable -
+          # confirmed by a build-time failure ("protoc: not found") invoking
+          # bare `protoc` with no path despite PROTOC_EXECUTABLE being set.
+          # Symlinking onto PATH covers every bare-name invocation regardless
+          # of which CMake variable (or none) triggered it.
+          mkdir -p /tmp/protoc-host-bin
+          ln -sf "$PROTOC_PATH" /tmp/protoc-host-bin/protoc
+          echo "/tmp/protoc-host-bin" >> "$GITHUB_PATH"
 
       # Dawn's vendor build (dawn-src/src/dawn's dawncpp_module target) declares
       # C++20 module sources unconditionally - CMake's Ninja generator only
