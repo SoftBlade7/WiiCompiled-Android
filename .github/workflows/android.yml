@@ -157,8 +157,20 @@ jobs:
             -Dprotobuf_BUILD_PROTOBUF_BINARIES=ON \
             -Dprotobuf_BUILD_LIBPROTOC=ON
           cmake --build /tmp/protoc-host-build --target protoc -j"$(nproc)"
-          find /tmp/protoc-host-build -name protoc -type f -exec chmod +x {} \;
-          PROTOC_PATH="$(find /tmp/protoc-host-build -name protoc -type f | head -1)"
+          # protobuf's CMake build names the real binary protoc-<version> and
+          # creates "protoc" as a symlink to it ("Creating executable symlink
+          # protoc" in the build log) - `find -type f` alone matches neither
+          # reliably by name, and missed the symlink entirely last run,
+          # leaving PROTOC_PATH empty. `-type f -o -type l` matches both a
+          # plain binary and a symlink to one; -L before it makes find follow
+          # symlinks so the -type check reflects the link's target.
+          find -L /tmp/protoc-host-build \( -type f -o -type l \) -name 'protoc*' -exec chmod +x {} \; 2>/dev/null || true
+          PROTOC_PATH="$(find -L /tmp/protoc-host-build -type f -name 'protoc' | head -1)"
+          if [ -z "$PROTOC_PATH" ]; then
+            PROTOC_PATH="$(find -L /tmp/protoc-host-build -type f -name 'protoc-*' | head -1)"
+          fi
+          test -n "$PROTOC_PATH"
+          test -x "$PROTOC_PATH"
           echo "Host protoc built at: $PROTOC_PATH"
           "$PROTOC_PATH" --version
           echo "PROTOC_EXECUTABLE=$PROTOC_PATH" >> "$GITHUB_ENV"
