@@ -1,0 +1,357 @@
+name: Android NDK build (validation)
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  gradle-build:
+    name: app/ Gradle build (aarch64, NDK, both products)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android NDK
+        id: ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27c
+          local-cache: false
+
+      - name: Check for translator-generated shard manifest
+        run: |
+          set -eu
+          if [ ! -f "generated/build_shards/shards.cmake" ]; then
+            echo "::error::generated/build_shards/shards.cmake is missing. Run Translator.Cli emit-build-shards locally against your own disc dump, then commit the generated/ output to this fork before this job can build the actual game runtime."
+            exit 1
+          fi
+          echo "Found generated/build_shards/shards.cmake - proceeding with a real runtime build."
+
+      # Translator.Cli always writes shards.cmake with the emitting machine's
+      # absolute paths baked in (see CMakePath() in TranslatedBuildShardEmitter.cs) -
+      # it has no relative-path mode. Rewrite the Windows prefix from local
+      # translation to this runner's actual checkout path before Gradle invokes
+      # CMake (app/build.gradle points externalNativeBuild.cmake.path at
+      # runtime/CMakeLists.txt, which include()s this manifest).
+      - name: Rewrite absolute paths in shards.cmake for this runner
+        run: |
+          set -eu
+          shards="generated/build_shards/shards.cmake"
+          before=$(grep -c "C:/Users/SoftBlade/Desktop/wiicompiled/compiled/BuildWorkspace/generated" "$shards" || true)
+          echo "Occurrences of the local Windows prefix before rewrite: $before"
+          sed -i "s#C:/Users/SoftBlade/Desktop/wiicompiled/compiled/BuildWorkspace/generated#${GITHUB_WORKSPACE}/generated#g" "$shards"
+          after=$(grep -c "C:/Users/SoftBlade/Desktop/wiicompiled/compiled/BuildWorkspace/generated" "$shards" || true)
+          echo "Occurrences remaining after rewrite: $after"
+          if [ "$after" -ne 0 ]; then
+            echo "::error::Rewrite left $after unmatched occurrences - check for other path variants in shards.cmake."
+            exit 1
+          fi
+
+      # Translator.Cli also emits generated/data_sections_init_blobs.S with the
+      # same emitting-machine absolute paths baked into its .incbin directives,
+      # plus MSVC/COFF section syntax (.section .rdata,"dr") that Clang's
+      # integrated assembler doesn't accept on ELF targets. Rewrite both before
+      # this file reaches the assembler.
+      - name: Rewrite generated data_sections_init_blobs.S for this runner
+        run: |
+          set -eu
+          asm="generated/data_sections_init_blobs.S"
+          if [ ! -f "$asm" ]; then
+            echo "::error::${asm} is missing. Run Translator.Cli emit-build-shards locally against your own disc dump, then commit the generated/ output to this fork before this job can build the actual game runtime."
+            exit 1
+          fi
+
+          before=$(grep -c "C:/Users/SoftBlade/Desktop/wiicompiled/compiled/BuildWorkspace/generated" "$asm" || true)
+          echo "Occurrences of the local Windows prefix before rewrite: $before"
+          sed -i "s#C:/Users/SoftBlade/Desktop/wiicompiled/compiled/BuildWorkspace/generated#${GITHUB_WORKSPACE}/generated#g" "$asm"
+          after=$(grep -c "C:/Users/SoftBlade/Desktop/wiicompiled/compiled/BuildWorkspace/generated" "$asm" || true)
+          echo "Occurrences of the local Windows prefix remaining after path rewrite: $after"
+          if [ "$after" -ne 0 ]; then
+            echo "::error::Rewrite left $after unmatched incbin path occurrences - check for other path variants in data_sections_init_blobs.S."
+            exit 1
+          fi
+
+          section_before=$(grep -c '\.section \.rdata,"dr"' "$asm" || true)
+          echo "Occurrences of MSVC .rdata section directive before rewrite: $section_before"
+          sed -i 's/\.section \.rdata,"dr"/.section .rodata,"a"/' "$asm"
+          section_after=$(grep -c '\.section \.rdata,"dr"' "$asm" || true)
+          echo "Occurrences of MSVC .rdata section directive remaining after rewrite: $section_after"
+          if [ "$section_after" -ne 0 ]; then
+            echo "::error::Rewrite left $section_after unmatched .rdata section directives in data_sections_init_blobs.S."
+            exit 1
+          fi
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      # Dawn's vendor build (AURORA_DAWN_PROVIDER=vendor, set in app/build.gradle)
+      # runs protoc as a build-time code generator for its "well-known types"
+      # (any.pb.h etc, under the libprotobuf_wkt target) - it must execute on
+      # the CI host (x86_64) even though the rest of Dawn is cross-compiled for
+      # arm64 Android, so a target-arch protoc from the NDK cannot be used.
+      # dawn-src/third_party/protobuf.cmake fails configure outright without an
+      # explicit host PROTOC_EXECUTABLE when cross-compiling.
+      #
+      # A system-installed protoc (e.g. apt's protobuf-compiler, pinned at an
+      # old 3.21.12 on Ubuntu 24.04) is NOT good enough here and was tried and
+      # confirmed broken: Dawn's third_party/protobuf is a live submodule that
+      # tracks a much newer upstream protobuf, so any.pb.cc generated by an old
+      # protoc doesn't match the newer libprotobuf headers it's compiled
+      # against ("this file was generated by a newer version of protoc").
+      # Core libprotobuf itself built fine in that same failed run - only the
+      # externally-generated well-known-types file broke - confirming this is
+      # a version-skew problem isolated to whichever protoc generates that file.
+      #
+      # Fix: build protoc natively (host arch, no Android toolchain) matching
+      # the protobuf version Dawn's third_party/protobuf submodule actually
+      # pins (confirmed "protobuf version: 35.1.0" from a real CMake configure
+      # of that exact submodule commit), so the generator and the headers it
+      # generates against don't skew.
+      #
+      # NOT a plain git checkout of Dawn's submodule: tried and confirmed
+      # broken two different ways.
+      #   1. A tarball download of Dawn itself doesn't include submodule
+      #      content at all (GitHub's archive/refs/tags endpoint leaves
+      #      third_party/protobuf as an empty placeholder - "does not appear
+      #      to contain CMakeLists.txt").
+      #   2. A real git clone + `git submodule update` scoped to just
+      #      third_party/protobuf DOES get the submodule's source, but that
+      #      bare checkout is missing the well-known-types .pb.cc files
+      #      (any.pb.cc etc) and descriptor.pb.cc - protobuf's own
+      #      cmake/libprotobuf.cmake expects these pre-generated, and a raw
+      #      submodule checkout doesn't ship them (this is protobuf's usual
+      #      protoc bootstrap problem: generating them requires a working
+      #      protoc, which is what we're trying to build in the first place).
+      #      ("Cannot find source file: .../any.pb.cc" was that failure.)
+      #
+      # Fix: download protocolbuffers/protobuf's own official v35.1 RELEASE
+      # tarball instead of a bare source checkout. Release tarballs are
+      # specifically packaged with the well-known-types .pb.cc/.pb.h files
+      # already generated and checked in, precisely to let a release be built
+      # into protoc without needing an existing protoc first. v35.1 (commit
+      # 35cd01f) matches the "protobuf version: 35.1.0" CMake reported for
+      # Dawn's actual pinned submodule commit.
+      - name: Build host protoc from protobuf v35.1 (matches Dawn's pinned version)
+        run: |
+          set -eu
+          curl -fL -o /tmp/protobuf-35.1.tar.gz \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v35.1/protobuf-35.1.tar.gz"
+          mkdir -p /tmp/protobuf-host-src
+          tar -xzf /tmp/protobuf-35.1.tar.gz -C /tmp/protobuf-host-src --strip-components=1
+          test -f /tmp/protobuf-host-src/src/google/protobuf/any.pb.cc
+          cmake -S /tmp/protobuf-host-src -B /tmp/protoc-host-build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -Dprotobuf_BUILD_TESTS=OFF \
+            -Dprotobuf_BUILD_EXAMPLES=OFF \
+            -Dprotobuf_BUILD_PROTOBUF_BINARIES=ON \
+            -Dprotobuf_BUILD_LIBPROTOC=ON
+          cmake --build /tmp/protoc-host-build --target protoc -j"$(nproc)"
+          # protobuf's CMake build names the real binary protoc-<version> and
+          # creates "protoc" as a symlink to it ("Creating executable symlink
+          # protoc" in the build log) - `find -type f` alone matches neither
+          # reliably by name, and missed the symlink entirely last run,
+          # leaving PROTOC_PATH empty. `-type f -o -type l` matches both a
+          # plain binary and a symlink to one; -L before it makes find follow
+          # symlinks so the -type check reflects the link's target.
+          find -L /tmp/protoc-host-build \( -type f -o -type l \) -name 'protoc*' -exec chmod +x {} \; 2>/dev/null || true
+          PROTOC_PATH="$(find -L /tmp/protoc-host-build -type f -name 'protoc' | head -1)"
+          if [ -z "$PROTOC_PATH" ]; then
+            PROTOC_PATH="$(find -L /tmp/protoc-host-build -type f -name 'protoc-*' | head -1)"
+          fi
+          test -n "$PROTOC_PATH"
+          test -x "$PROTOC_PATH"
+          echo "Host protoc built at: $PROTOC_PATH"
+          "$PROTOC_PATH" --version
+          echo "PROTOC_EXECUTABLE=$PROTOC_PATH" >> "$GITHUB_ENV"
+          # Also put it on PATH under the plain name "protoc": Dawn's own
+          # third_party/google/protobuf codegen (the well-known types, e.g.
+          # any.pb.cc) uses CMake's standard protobuf_generate(), which
+          # resolves protoc via the protobuf::protoc imported target /
+          # find_program(), NOT via Dawn's PROTOC_EXECUTABLE cache variable -
+          # confirmed by a build-time failure ("protoc: not found") invoking
+          # bare `protoc` with no path despite PROTOC_EXECUTABLE being set.
+          # Symlinking onto PATH covers every bare-name invocation regardless
+          # of which CMake variable (or none) triggered it.
+          mkdir -p /tmp/protoc-host-bin
+          ln -sf "$PROTOC_PATH" /tmp/protoc-host-bin/protoc
+          echo "/tmp/protoc-host-bin" >> "$GITHUB_PATH"
+
+      # Dawn's vendor build (dawn-src/src/dawn's dawncpp_module target) declares
+      # C++20 module sources unconditionally - CMake's Ninja generator only
+      # supports building targets with modules from Ninja 1.11+, and this is
+      # enforced regardless of CMAKE_CXX_SCAN_FOR_MODULES (tried and confirmed
+      # not to help - the generator-capability check fires whenever a target has
+      # any module FILE_SET, whether or not scanning is enabled). AGP's own
+      # SDK-managed Ninja is 1.10.2 and fails CMake's Generate step outright.
+      # Download the official upstream binary directly rather than relying on
+      # apt (Ubuntu's ninja-build package has historically lagged well behind
+      # upstream releases too).
+      - name: Install modern Ninja (1.13.2) for Dawn's C++20 module target
+        run: |
+          set -eu
+          curl -fL -o /tmp/ninja-linux.zip https://github.com/ninja-build/ninja/releases/download/v1.13.2/ninja-linux.zip
+          sudo unzip -o /tmp/ninja-linux.zip -d /usr/local/bin
+          sudo chmod +x /usr/local/bin/ninja
+          /usr/local/bin/ninja --version
+
+      # ANDROID_HOME/ANDROID_SDK_ROOT are pre-set by the GitHub-hosted runner
+      # image; app/build.gradle's externalNativeBuild.cmake block drives the
+      # same NDK toolchain configuration the old raw-CMake job passed by hand
+      # (ANDROID_PLATFORM, AURORA_DAWN_PROVIDER=vendor, AURORA_DAWN_VERSION),
+      # now owned in one place instead of duplicated between this workflow and
+      # Gradle. PROTOC_EXECUTABLE was already exported to GITHUB_ENV by the
+      # "Build host protoc" step above and does NOT need to be re-set here -
+      # doing so would silently override it back to the wrong system protoc
+      # path. NINJA_EXECUTABLE points app/build.gradle's cmake.arguments at
+      # the modern Ninja binary installed above, overriding AGP's bundled 1.10.2.
+      - name: Build debug APK (both WiiCompiled and RetroRewind products)
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+          NINJA_EXECUTABLE: /usr/local/bin/ninja
+        run: ./gradlew assembleDebug --stacktrace
+
+      # Four separate guesses at DawnCacheDeviceDescriptor's construction/callback API have
+      # each failed against the real generated header in turn: a single brace wrapped in
+      # parens, a double-brace via an explicitly-named ::Init struct, direct member
+      # assignment after default-construction, and now SetDawnLoadCacheDataCallback/
+      # SetDawnStoreCacheDataCallback with a bare C function pointer (compiles as far as
+      # template instantiation, then fails - CArgConverter has no specialization matching
+      # our callback's exact tuple shape). Dump the actual generated webgpu_cpp.h - the
+      # struct/Init definitions, the CArgConverter template and its specializations, and
+      # the raw C callback typedefs - so the next fix is based on the real header, not
+      # inference from other Dawn versions or other projects' bindings. Gated on the build
+      # step failing so this only runs when there's something to diagnose, and app/.cxx
+      # still has the partially configured/built tree from that failed attempt.
+      - name: Dump actual DawnCacheDeviceDescriptor/CArgConverter definitions from generated header
+        if: failure()
+        run: |
+          set -eu
+          header=$(find app/.cxx -path '*/gen/include/dawn/webgpu_cpp.h' | head -1)
+          if [ -z "$header" ]; then
+            echo "webgpu_cpp.h not found under app/.cxx - Dawn's codegen step may not have run yet."
+            find app/.cxx -iname 'webgpu_cpp.h' 2>/dev/null || echo "(no webgpu_cpp.h anywhere under app/.cxx)"
+            exit 0
+          fi
+          echo "--- Found generated header: $header ---"
+          echo ""
+          echo "--- Context around every DawnCacheDeviceDescriptor mention (40 lines after each) ---"
+          grep -n -A40 "DawnCacheDeviceDescriptor" "$header"
+          echo ""
+          echo "--- Just the line numbers, for reference ---"
+          grep -n "DawnCacheDeviceDescriptor" "$header"
+          echo ""
+          # Added after the previous dump proved insufficient: SetDawnLoadCacheDataCallback
+          # compiled (the field/member-shape issue was fixed), but instantiating
+          # CArgConverter for our callback's signature now fails with "implicit instantiation
+          # of undefined template" at webgpu_cpp.h:4679 - meaning CArgConverter has no
+          # specialization matching our tuple shape. Need the actual template definition and
+          # whatever specializations DO exist, plus the raw C typedef for the two callback
+          # function types, to know what shape it actually wants.
+          echo "--- Context around line 4679 (the actual failing instantiation site) ---"
+          sed -n '4650,4700p' "$header"
+          echo ""
+          echo "--- Every CArgConverter mention (60 lines after each) ---"
+          grep -n -A60 "CArgConverter" "$header"
+          echo ""
+          echo "--- Every CallbackInfoHelper mention (30 lines after each) ---"
+          grep -n -A30 "CallbackInfoHelper" "$header"
+          echo ""
+          echo "--- Raw C typedefs for the two callback function types, wherever they live ---"
+          grep -rn "WGPUDawnLoadCacheDataFunction\|WGPUDawnStoreCacheDataFunction\|WGPUDawnLoadCacheDataCallback\b\|WGPUDawnStoreCacheDataCallback\b" "$(dirname "$header")"/../.. 2>/dev/null | grep -v "webgpu_cpp\.h:" | head -60
+          echo ""
+          echo "--- Same typedefs within webgpu_cpp.h itself, for reference ---"
+          grep -n "WGPUDawnLoadCacheDataFunction\|WGPUDawnStoreCacheDataFunction\|WGPUDawnLoadCacheDataCallback\b\|WGPUDawnStoreCacheDataCallback\b" "$header"
+
+      # Direct evidence, not log archaeology: GitHub Actions silently drops/collapses
+      # huge verbose linker output before it reaches later lines, so CMAKE_VERBOSE_MAKEFILE
+      # could not actually show us the real link command for libwiicompiled.so. Checking the
+      # symbol table ourselves, at two points in the pipeline, tells us directly whether
+      # SDL_main survives (a) the link step itself and (b) AGP's later stripDebugDebugSymbols
+      # packaging step - narrowing down exactly where it's being lost.
+      - name: Check SDL_main symbol survives build and packaging
+        run: |
+          set -eu
+          echo "--- Every libwiicompiled.so anywhere under app/, with full paths ---"
+          find app -name 'libwiicompiled.so' -exec ls -la {} \; 2>/dev/null
+
+          echo ""
+          echo "--- Checking each one for SDL_main (raw llvm-nm -D output, not just grep) ---"
+          while IFS= read -r so_path; do
+            echo "=== $so_path ==="
+            "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm" -D "$so_path" 2>&1 | grep -i "main" || echo "  (no symbol containing 'main' found at all)"
+            echo ""
+          done < <(find app -name 'libwiicompiled.so' 2>/dev/null)
+
+          echo "--- Every arm64-v8a .so packaged in the final APK ---"
+          apk=$(find app/build/outputs/apk/debug -name '*.apk' | head -1)
+          unzip -l "$apk" | grep "lib/arm64-v8a/" || echo "No lib/arm64-v8a/ entries in the APK"
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+
+      # Direct evidence for which Dawn provider was ACTUALLY used, not which one we intended -
+      # we've been burned twice already (SDL_MAIN_HANDLED, then this) by a source-level fix not
+      # actually reaching the built artifact. Checks three independent signals: (1) the resolved
+      # AURORA_DAWN_PROVIDER value CMake actually cached, (2) whether Dawn's source was fetched
+      # for building (vendor) vs a prebuilt archive was downloaded (package), (3) whether the
+      # final .so has any external Dawn shared-library dependency at all (vendor+static, the
+      # cross-compiling default, should statically link Dawn in with zero external NEEDED entries
+      # for it).
+      - name: Check which Dawn provider was actually used
+        run: |
+          set -eu
+          echo "--- Resolved AURORA_DAWN_PROVIDER in CMakeCache.txt ---"
+          cache=$(find app/.cxx -name 'CMakeCache.txt' | head -1)
+          if [ -z "$cache" ]; then
+            echo "::warning::No CMakeCache.txt found under app/.cxx"
+          else
+            echo "Found: $cache"
+            grep -i "AURORA_DAWN_PROVIDER" "$cache" || echo "AURORA_DAWN_PROVIDER not present in cache at all"
+          fi
+
+          echo ""
+          echo "--- Dawn-related directories under _deps (vendor = dawn-src present; package = a prebuilt archive dir instead) ---"
+          find app/.cxx -maxdepth 8 -iname "*dawn*" -type d 2>/dev/null
+
+          echo ""
+          echo "--- Dynamic dependencies (NEEDED) of the built libwiicompiled.so - vendor+static should show no external Dawn .so ---"
+          so_path=$(find app/.cxx -name 'libwiicompiled.so' 2>/dev/null | head -1)
+          if [ -z "$so_path" ]; then
+            so_path=$(find app/build/intermediates -name 'libwiicompiled.so' 2>/dev/null | head -1)
+          fi
+          if [ -z "$so_path" ]; then
+            echo "::warning::No libwiicompiled.so found to inspect"
+          else
+            echo "Found: $so_path"
+            "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -d "$so_path" | grep -i "NEEDED" || echo "No NEEDED entries at all"
+          fi
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+
+      - name: Upload debug APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wiicompiled-android-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
+
+      - name: Upload Gradle/CMake logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-gradle-build-logs
+          path: |
+            app/build/.cxx/**/CMakeError.log
+            app/build/.cxx/**/CMakeOutput.log
+          if-no-files-found: ignore
