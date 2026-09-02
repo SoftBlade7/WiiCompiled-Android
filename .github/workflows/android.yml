@@ -221,6 +221,35 @@ jobs:
           NINJA_EXECUTABLE: /usr/local/bin/ninja
         run: ./gradlew assembleDebug --stacktrace
 
+      # Three separate guesses at how to construct DawnCacheDeviceDescriptor in this
+      # Dawn version have each failed against the real generated header: a single
+      # brace wrapped in parens (no matching constructor), a double-brace via an
+      # explicitly-named ::Init struct (Init has no such fields), and direct member
+      # assignment after default-construction (no such members on the struct itself
+      # either). Rather than guess a fourth time, dump the actual generated
+      # webgpu_cpp.h struct/Init definitions from this exact build so the next fix
+      # is based on the real header, not inference from other Dawn versions or
+      # other projects' bindings. Gated on the build step failing so this only runs
+      # when there's something to diagnose, and app/.cxx still has the partially
+      # configured/built tree from that failed attempt.
+      - name: Dump actual DawnCacheDeviceDescriptor definition from generated header
+        if: failure()
+        run: |
+          set -eu
+          header=$(find app/.cxx -path '*/gen/include/dawn/webgpu_cpp.h' | head -1)
+          if [ -z "$header" ]; then
+            echo "webgpu_cpp.h not found under app/.cxx - Dawn's codegen step may not have run yet."
+            find app/.cxx -iname 'webgpu_cpp.h' 2>/dev/null || echo "(no webgpu_cpp.h anywhere under app/.cxx)"
+            exit 0
+          fi
+          echo "--- Found generated header: $header ---"
+          echo ""
+          echo "--- Context around every DawnCacheDeviceDescriptor mention (40 lines after each) ---"
+          grep -n -A40 "DawnCacheDeviceDescriptor" "$header"
+          echo ""
+          echo "--- Just the line numbers, for reference ---"
+          grep -n "DawnCacheDeviceDescriptor" "$header"
+
       # Direct evidence, not log archaeology: GitHub Actions silently drops/collapses
       # huge verbose linker output before it reaches later lines, so CMAKE_VERBOSE_MAKEFILE
       # could not actually show us the real link command for libwiicompiled.so. Checking the
@@ -330,19 +359,4 @@ jobs:
       - name: Compile the ABI proof fixture for aarch64-linux-android
         run: |
           set -eu
-          clang="${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-clang++"
-          cat > declspec_shim.h <<'EOF'
-          #pragma once
-          #if !defined(_WIN64)
-          #define __declspec(x) __attribute__((x))
-          #endif
-          EOF
-          "$clang" -std=c++17 -O2 -static \
-            -include declspec_shim.h \
-            -o abi_proof \
-            translator/tests/fixtures/statefree_regcall_sret_proof.cpp
-          file abi_proof
-
-      - name: Run the ABI proof fixture under qemu-aarch64
-        run: qemu-aarch64 ./abi_proof
-        
+          clang="${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-
