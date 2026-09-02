@@ -74,8 +74,15 @@ android {
                 // than hardcoded, since the path may differ outside CI. Falls back to
                 // "protoc" (resolved via PATH) if the env var isn't set, for local builds
                 // where protoc is already on PATH.
+                // CMAKE_CXX_SCAN_FOR_MODULES=OFF: Dawn's vendor build (dawn-src/src/dawn's
+                // dawncpp_module target) uses C++20 modules, which CMake's Ninja generator
+                // only supports from Ninja 1.11+ - AGP's SDK-managed Ninja is 1.10.2 and
+                // fails outright at CMake Generate ("Ninja generator does not support C++20
+                // modules using Ninja version 1.10.2"). Disabling module scanning falls the
+                // target back to ordinary non-modular compilation instead of requiring a
+                // newer Ninja to be supplied separately.
                 def protocExecutable = System.getenv("PROTOC_EXECUTABLE") ?: "protoc"
-                arguments "-DANDROID_PLATFORM=android-30", "-DAURORA_DAWN_PROVIDER=vendor", "-DAURORA_DAWN_VERSION=v20260819.212523", "-DPROTOC_EXECUTABLE=${protocExecutable}", "-DCMAKE_BUILD_TYPE=Release"
+                arguments "-DANDROID_PLATFORM=android-30", "-DAURORA_DAWN_PROVIDER=vendor", "-DAURORA_DAWN_VERSION=v20260819.212523", "-DPROTOC_EXECUTABLE=${protocExecutable}", "-DCMAKE_CXX_SCAN_FOR_MODULES=OFF", "-DCMAKE_BUILD_TYPE=Release"
             }
         }
     }
