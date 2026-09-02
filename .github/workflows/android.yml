@@ -94,14 +94,31 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      # Dawn's vendor build (AURORA_DAWN_PROVIDER=vendor, set in app/build.gradle)
+      # runs protoc as a build-time code generator - it must execute on the CI
+      # host (x86_64 Linux) even though the rest of Dawn is being cross-compiled
+      # for arm64 Android, so a target-arch protoc from the NDK cannot be used
+      # here. dawn-src/third_party/protobuf.cmake fails configure outright
+      # without an explicit host PROTOC_EXECUTABLE when cross-compiling.
+      - name: Install host protoc for Dawn's cross-compiled vendor build
+        run: |
+          set -eu
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+          which protoc
+          protoc --version
+
       # ANDROID_HOME/ANDROID_SDK_ROOT are pre-set by the GitHub-hosted runner
       # image; app/build.gradle's externalNativeBuild.cmake block drives the
       # same NDK toolchain configuration the old raw-CMake job passed by hand
-      # (ANDROID_PLATFORM, AURORA_DAWN_PROVIDER=package), now owned in one
-      # place instead of duplicated between this workflow and Gradle.
+      # (ANDROID_PLATFORM, AURORA_DAWN_PROVIDER=vendor, AURORA_DAWN_VERSION),
+      # now owned in one place instead of duplicated between this workflow and
+      # Gradle. PROTOC_EXECUTABLE points app/build.gradle's cmake.arguments at
+      # the host protoc installed above.
       - name: Build debug APK (both WiiCompiled and RetroRewind products)
         env:
           ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+          PROTOC_EXECUTABLE: /usr/bin/protoc
         run: ./gradlew assembleDebug --stacktrace
 
       # Direct evidence, not log archaeology: GitHub Actions silently drops/collapses
@@ -228,4 +245,3 @@ jobs:
 
       - name: Run the ABI proof fixture under qemu-aarch64
         run: qemu-aarch64 ./abi_proof
-        
