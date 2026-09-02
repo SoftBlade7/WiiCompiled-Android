@@ -221,18 +221,19 @@ jobs:
           NINJA_EXECUTABLE: /usr/local/bin/ninja
         run: ./gradlew assembleDebug --stacktrace
 
-      # Three separate guesses at how to construct DawnCacheDeviceDescriptor in this
-      # Dawn version have each failed against the real generated header: a single
-      # brace wrapped in parens (no matching constructor), a double-brace via an
-      # explicitly-named ::Init struct (Init has no such fields), and direct member
-      # assignment after default-construction (no such members on the struct itself
-      # either). Rather than guess a fourth time, dump the actual generated
-      # webgpu_cpp.h struct/Init definitions from this exact build so the next fix
-      # is based on the real header, not inference from other Dawn versions or
-      # other projects' bindings. Gated on the build step failing so this only runs
-      # when there's something to diagnose, and app/.cxx still has the partially
-      # configured/built tree from that failed attempt.
-      - name: Dump actual DawnCacheDeviceDescriptor definition from generated header
+      # Four separate guesses at DawnCacheDeviceDescriptor's construction/callback API have
+      # each failed against the real generated header in turn: a single brace wrapped in
+      # parens, a double-brace via an explicitly-named ::Init struct, direct member
+      # assignment after default-construction, and now SetDawnLoadCacheDataCallback/
+      # SetDawnStoreCacheDataCallback with a bare C function pointer (compiles as far as
+      # template instantiation, then fails - CArgConverter has no specialization matching
+      # our callback's exact tuple shape). Dump the actual generated webgpu_cpp.h - the
+      # struct/Init definitions, the CArgConverter template and its specializations, and
+      # the raw C callback typedefs - so the next fix is based on the real header, not
+      # inference from other Dawn versions or other projects' bindings. Gated on the build
+      # step failing so this only runs when there's something to diagnose, and app/.cxx
+      # still has the partially configured/built tree from that failed attempt.
+      - name: Dump actual DawnCacheDeviceDescriptor/CArgConverter definitions from generated header
         if: failure()
         run: |
           set -eu
@@ -249,6 +250,28 @@ jobs:
           echo ""
           echo "--- Just the line numbers, for reference ---"
           grep -n "DawnCacheDeviceDescriptor" "$header"
+          echo ""
+          # Added after the previous dump proved insufficient: SetDawnLoadCacheDataCallback
+          # compiled (the field/member-shape issue was fixed), but instantiating
+          # CArgConverter for our callback's signature now fails with "implicit instantiation
+          # of undefined template" at webgpu_cpp.h:4679 - meaning CArgConverter has no
+          # specialization matching our tuple shape. Need the actual template definition and
+          # whatever specializations DO exist, plus the raw C typedef for the two callback
+          # function types, to know what shape it actually wants.
+          echo "--- Context around line 4679 (the actual failing instantiation site) ---"
+          sed -n '4650,4700p' "$header"
+          echo ""
+          echo "--- Every CArgConverter mention (60 lines after each) ---"
+          grep -n -A60 "CArgConverter" "$header"
+          echo ""
+          echo "--- Every CallbackInfoHelper mention (30 lines after each) ---"
+          grep -n -A30 "CallbackInfoHelper" "$header"
+          echo ""
+          echo "--- Raw C typedefs for the two callback function types, wherever they live ---"
+          grep -rn "WGPUDawnLoadCacheDataFunction\|WGPUDawnStoreCacheDataFunction\|WGPUDawnLoadCacheDataCallback\b\|WGPUDawnStoreCacheDataCallback\b" "$(dirname "$header")"/../.. 2>/dev/null | grep -v "webgpu_cpp\.h:" | head -60
+          echo ""
+          echo "--- Same typedefs within webgpu_cpp.h itself, for reference ---"
+          grep -n "WGPUDawnLoadCacheDataFunction\|WGPUDawnStoreCacheDataFunction\|WGPUDawnLoadCacheDataCallback\b\|WGPUDawnStoreCacheDataCallback\b" "$header"
 
       # Direct evidence, not log archaeology: GitHub Actions silently drops/collapses
       # huge verbose linker output before it reaches later lines, so CMAKE_VERBOSE_MAKEFILE
@@ -310,53 +333,4 @@ jobs:
             echo "::warning::No libwiicompiled.so found to inspect"
           else
             echo "Found: $so_path"
-            "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -d "$so_path" | grep -i "NEEDED" || echo "No NEEDED entries at all"
-          fi
-        env:
-          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
-
-      - name: Upload debug APK
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: wiicompiled-android-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: warn
-
-      - name: Upload Gradle/CMake logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-gradle-build-logs
-          path: |
-            app/build/.cxx/**/CMakeError.log
-            app/build/.cxx/**/CMakeOutput.log
-          if-no-files-found: ignore
-
-  abi-proof-ndk:
-    name: statefree_regcall_sret_proof (aarch64, NDK, no game data)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Set up Android NDK
-        id: ndk
-        uses: nttld/setup-ndk@v1
-        with:
-          ndk-version: r27c
-          local-cache: false
-
-      # This fixture (translator/tests/fixtures/statefree_regcall_sret_proof.cpp) is
-      # synthetic ABI-stress-test C++ from the translator's own test suite - no game
-      # code or assets involved. __declspec(noinline) is MSVC/clang-cl-only, so a
-      # portable shim header is injected ahead of it for the NDK's plain Clang target,
-      # rather than editing the committed fixture.
-      - name: Install qemu-user for running the cross-compiled aarch64 binary
-        run: sudo apt-get update && sudo apt-get install -y qemu-user
-
-      - name: Compile the ABI proof fixture for aarch64-linux-android
-        run: |
-          set -eu
-          clang="${{ steps.ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-
+            "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-rea
