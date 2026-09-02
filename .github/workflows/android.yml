@@ -333,4 +333,25 @@ jobs:
             echo "::warning::No libwiicompiled.so found to inspect"
           else
             echo "Found: $so_path"
-            "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-rea
+            "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" -d "$so_path" | grep -i "NEEDED" || echo "No NEEDED entries at all"
+          fi
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+
+      - name: Upload debug APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wiicompiled-android-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
+
+      - name: Upload Gradle/CMake logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-gradle-build-logs
+          path: |
+            app/build/.cxx/**/CMakeError.log
+            app/build/.cxx/**/CMakeOutput.log
+          if-no-files-found: ignore
