@@ -65,7 +65,17 @@ android {
                 // override keeps the underlying native build Release regardless of which
                 // Gradle build variant (debug/release) triggers it, without touching the
                 // shared CMakeLists.txt that the desktop build also uses.
-                arguments "-DANDROID_PLATFORM=android-30", "-DAURORA_DAWN_PROVIDER=vendor", "-DAURORA_DAWN_VERSION=v20260819.212523", "-DCMAKE_BUILD_TYPE=Release"
+                // PROTOC_EXECUTABLE: Dawn's vendor build (AURORA_DAWN_PROVIDER=vendor) runs
+                // protoc as a build-time code generator, which must run on the CI host
+                // (x86_64) even though the rest of Dawn is cross-compiled for arm64 Android.
+                // dawn-src/third_party/protobuf.cmake hard-errors on configure without this
+                // when cross-compiling. Sourced from the PROTOC_EXECUTABLE env var (set by
+                // .github/workflows/android.yml after installing protobuf-compiler) rather
+                // than hardcoded, since the path may differ outside CI. Falls back to
+                // "protoc" (resolved via PATH) if the env var isn't set, for local builds
+                // where protoc is already on PATH.
+                def protocExecutable = System.getenv("PROTOC_EXECUTABLE") ?: "protoc"
+                arguments "-DANDROID_PLATFORM=android-30", "-DAURORA_DAWN_PROVIDER=vendor", "-DAURORA_DAWN_VERSION=v20260819.212523", "-DPROTOC_EXECUTABLE=${protocExecutable}", "-DCMAKE_BUILD_TYPE=Release"
             }
         }
     }
