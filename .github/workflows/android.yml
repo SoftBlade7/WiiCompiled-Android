@@ -108,17 +108,37 @@ jobs:
           which protoc
           protoc --version
 
+      # Dawn's vendor build (dawn-src/src/dawn's dawncpp_module target) declares
+      # C++20 module sources unconditionally - CMake's Ninja generator only
+      # supports building targets with modules from Ninja 1.11+, and this is
+      # enforced regardless of CMAKE_CXX_SCAN_FOR_MODULES (tried and confirmed
+      # not to help - the generator-capability check fires whenever a target has
+      # any module FILE_SET, whether or not scanning is enabled). AGP's own
+      # SDK-managed Ninja is 1.10.2 and fails CMake's Generate step outright.
+      # Download the official upstream binary directly rather than relying on
+      # apt (Ubuntu's ninja-build package has historically lagged well behind
+      # upstream releases too).
+      - name: Install modern Ninja (1.13.2) for Dawn's C++20 module target
+        run: |
+          set -eu
+          curl -fL -o /tmp/ninja-linux.zip https://github.com/ninja-build/ninja/releases/download/v1.13.2/ninja-linux.zip
+          sudo unzip -o /tmp/ninja-linux.zip -d /usr/local/bin
+          sudo chmod +x /usr/local/bin/ninja
+          /usr/local/bin/ninja --version
+
       # ANDROID_HOME/ANDROID_SDK_ROOT are pre-set by the GitHub-hosted runner
       # image; app/build.gradle's externalNativeBuild.cmake block drives the
       # same NDK toolchain configuration the old raw-CMake job passed by hand
       # (ANDROID_PLATFORM, AURORA_DAWN_PROVIDER=vendor, AURORA_DAWN_VERSION),
       # now owned in one place instead of duplicated between this workflow and
       # Gradle. PROTOC_EXECUTABLE points app/build.gradle's cmake.arguments at
-      # the host protoc installed above.
+      # the host protoc installed above; NINJA_EXECUTABLE points it at the
+      # modern Ninja binary installed above, overriding AGP's bundled 1.10.2.
       - name: Build debug APK (both WiiCompiled and RetroRewind products)
         env:
           ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
           PROTOC_EXECUTABLE: /usr/bin/protoc
+          NINJA_EXECUTABLE: /usr/local/bin/ninja
         run: ./gradlew assembleDebug --stacktrace
 
       # Direct evidence, not log archaeology: GitHub Actions silently drops/collapses
@@ -245,3 +265,4 @@ jobs:
 
       - name: Run the ABI proof fixture under qemu-aarch64
         run: qemu-aarch64 ./abi_proof
+        
