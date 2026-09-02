@@ -112,35 +112,44 @@ jobs:
       # externally-generated well-known-types file broke - confirming this is
       # a version-skew problem isolated to whichever protoc generates that file.
       #
-      # Fix: build protoc natively (host arch, no Android toolchain) from the
-      # EXACT SAME Dawn source (same AURORA_DAWN_VERSION tag) used for the real
-      # cross-compiled build, so the generator and the headers it generates
-      # against always come from the same tree and can never skew.
+      # Fix: build protoc natively (host arch, no Android toolchain) matching
+      # the protobuf version Dawn's third_party/protobuf submodule actually
+      # pins (confirmed "protobuf version: 35.1.0" from a real CMake configure
+      # of that exact submodule commit), so the generator and the headers it
+      # generates against don't skew.
       #
-      # Must be a real git clone, NOT a tarball download: third_party/protobuf
-      # is a git submodule (chromium.googlesource.com mirror of
-      # protocolbuffers/protobuf at whatever commit Dawn currently pins), and
-      # GitHub's archive/refs/tags/*.tar.gz endpoint only contains an empty
-      # placeholder directory for submodules ("does not appear to contain
-      # CMakeLists.txt" was the first failure here).
+      # NOT a plain git checkout of Dawn's submodule: tried and confirmed
+      # broken two different ways.
+      #   1. A tarball download of Dawn itself doesn't include submodule
+      #      content at all (GitHub's archive/refs/tags endpoint leaves
+      #      third_party/protobuf as an empty placeholder - "does not appear
+      #      to contain CMakeLists.txt").
+      #   2. A real git clone + `git submodule update` scoped to just
+      #      third_party/protobuf DOES get the submodule's source, but that
+      #      bare checkout is missing the well-known-types .pb.cc files
+      #      (any.pb.cc etc) and descriptor.pb.cc - protobuf's own
+      #      cmake/libprotobuf.cmake expects these pre-generated, and a raw
+      #      submodule checkout doesn't ship them (this is protobuf's usual
+      #      protoc bootstrap problem: generating them requires a working
+      #      protoc, which is what we're trying to build in the first place).
+      #      ("Cannot find source file: .../any.pb.cc" was that failure.)
       #
-      # Do NOT use --recurse-submodules on the clone itself - tried and
-      # confirmed to pull in ALL ~30+ of Dawn's submodules (DirectX shader
-      # compiler, LLVM libc++/libunwind, googletest, benchmark, catapult, an
-      # entire ML runtime under third_party/litert-lm, etc.), none of which
-      # protoc needs, and the whole clone failed outright on an unrelated LFS
-      # object in litert-lm that chromium's git host rejected (HTTP 405) -
-      # collateral damage from a submodule we never wanted in the first place.
-      # Cloning plain, then running `git submodule update` scoped to only
-      # third_party/protobuf, fetches exactly the one submodule needed.
-      - name: Build host protoc from Dawn's own vendored source
+      # Fix: download protocolbuffers/protobuf's own official v35.1 RELEASE
+      # tarball instead of a bare source checkout. Release tarballs are
+      # specifically packaged with the well-known-types .pb.cc/.pb.h files
+      # already generated and checked in, precisely to let a release be built
+      # into protoc without needing an existing protoc first. v35.1 (commit
+      # 35cd01f) matches the "protobuf version: 35.1.0" CMake reported for
+      # Dawn's actual pinned submodule commit.
+      - name: Build host protoc from protobuf v35.1 (matches Dawn's pinned version)
         run: |
           set -eu
-          git clone --depth 1 --branch v20260819.212523 https://github.com/google/dawn.git /tmp/dawn-host-src
-          cd /tmp/dawn-host-src
-          git submodule update --init --depth 1 -- third_party/protobuf
-          test -f third_party/protobuf/CMakeLists.txt
-          cmake -S third_party/protobuf -B /tmp/protoc-host-build \
+          curl -fL -o /tmp/protobuf-35.1.tar.gz \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v35.1/protobuf-35.1.tar.gz"
+          mkdir -p /tmp/protobuf-host-src
+          tar -xzf /tmp/protobuf-35.1.tar.gz -C /tmp/protobuf-host-src --strip-components=1
+          test -f /tmp/protobuf-host-src/src/google/protobuf/any.pb.cc
+          cmake -S /tmp/protobuf-host-src -B /tmp/protoc-host-build \
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -Dprotobuf_BUILD_TESTS=OFF \
