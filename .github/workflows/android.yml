@@ -117,23 +117,30 @@ jobs:
       # cross-compiled build, so the generator and the headers it generates
       # against always come from the same tree and can never skew.
       #
-      # Must be a real git clone with --recurse-submodules, NOT a tarball
-      # download: third_party/protobuf is a git submodule
-      # (chromium.googlesource.com/external/github.com/protocolbuffers/protobuf
-      # at whatever commit Dawn currently pins), and GitHub's
-      # archive/refs/tags/*.tar.gz endpoint does not include submodule
-      # contents - it only contains an empty placeholder directory for them,
-      # which is why the first attempt at this step failed with "does not
-      # appear to contain CMakeLists.txt". A shallow clone (--depth 1) of just
-      # the tag plus --recurse-submodules gets the real submodule source
-      # without cloning Dawn's full history.
+      # Must be a real git clone, NOT a tarball download: third_party/protobuf
+      # is a git submodule (chromium.googlesource.com mirror of
+      # protocolbuffers/protobuf at whatever commit Dawn currently pins), and
+      # GitHub's archive/refs/tags/*.tar.gz endpoint only contains an empty
+      # placeholder directory for submodules ("does not appear to contain
+      # CMakeLists.txt" was the first failure here).
+      #
+      # Do NOT use --recurse-submodules on the clone itself - tried and
+      # confirmed to pull in ALL ~30+ of Dawn's submodules (DirectX shader
+      # compiler, LLVM libc++/libunwind, googletest, benchmark, catapult, an
+      # entire ML runtime under third_party/litert-lm, etc.), none of which
+      # protoc needs, and the whole clone failed outright on an unrelated LFS
+      # object in litert-lm that chromium's git host rejected (HTTP 405) -
+      # collateral damage from a submodule we never wanted in the first place.
+      # Cloning plain, then running `git submodule update` scoped to only
+      # third_party/protobuf, fetches exactly the one submodule needed.
       - name: Build host protoc from Dawn's own vendored source
         run: |
           set -eu
-          git clone --depth 1 --branch v20260819.212523 --recurse-submodules --shallow-submodules \
-            https://github.com/google/dawn.git /tmp/dawn-host-src
-          test -f /tmp/dawn-host-src/third_party/protobuf/CMakeLists.txt
-          cmake -S /tmp/dawn-host-src/third_party/protobuf -B /tmp/protoc-host-build \
+          git clone --depth 1 --branch v20260819.212523 https://github.com/google/dawn.git /tmp/dawn-host-src
+          cd /tmp/dawn-host-src
+          git submodule update --init --depth 1 -- third_party/protobuf
+          test -f third_party/protobuf/CMakeLists.txt
+          cmake -S third_party/protobuf -B /tmp/protoc-host-build \
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -Dprotobuf_BUILD_TESTS=OFF \
