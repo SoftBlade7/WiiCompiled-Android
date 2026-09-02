@@ -113,15 +113,26 @@ jobs:
       # a version-skew problem isolated to whichever protoc generates that file.
       #
       # Fix: build protoc natively (host arch, no Android toolchain) from the
-      # EXACT SAME Dawn source tarball used for the real cross-compiled build
-      # (same AURORA_DAWN_VERSION tag), so the generator and the headers it
-      # generates against always come from the same tree and can never skew.
+      # EXACT SAME Dawn source (same AURORA_DAWN_VERSION tag) used for the real
+      # cross-compiled build, so the generator and the headers it generates
+      # against always come from the same tree and can never skew.
+      #
+      # Must be a real git clone with --recurse-submodules, NOT a tarball
+      # download: third_party/protobuf is a git submodule
+      # (chromium.googlesource.com/external/github.com/protocolbuffers/protobuf
+      # at whatever commit Dawn currently pins), and GitHub's
+      # archive/refs/tags/*.tar.gz endpoint does not include submodule
+      # contents - it only contains an empty placeholder directory for them,
+      # which is why the first attempt at this step failed with "does not
+      # appear to contain CMakeLists.txt". A shallow clone (--depth 1) of just
+      # the tag plus --recurse-submodules gets the real submodule source
+      # without cloning Dawn's full history.
       - name: Build host protoc from Dawn's own vendored source
         run: |
           set -eu
-          curl -fL -o /tmp/dawn-src.tar.gz "https://github.com/google/dawn/archive/refs/tags/v20260819.212523.tar.gz"
-          mkdir -p /tmp/dawn-host-src
-          tar -xzf /tmp/dawn-src.tar.gz -C /tmp/dawn-host-src --strip-components=1
+          git clone --depth 1 --branch v20260819.212523 --recurse-submodules --shallow-submodules \
+            https://github.com/google/dawn.git /tmp/dawn-host-src
+          test -f /tmp/dawn-host-src/third_party/protobuf/CMakeLists.txt
           cmake -S /tmp/dawn-host-src/third_party/protobuf -B /tmp/protoc-host-build \
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
