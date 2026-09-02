@@ -81,8 +81,17 @@ android {
                 // modules using Ninja version 1.10.2"). Disabling module scanning falls the
                 // target back to ordinary non-modular compilation instead of requiring a
                 // newer Ninja to be supplied separately.
+                // CMAKE_MAKE_PROGRAM: AGP's own SDK-managed Ninja (1.10.2) is too old to
+                // build Dawn's dawncpp_module target, which declares C++20 module sources
+                // unconditionally - CMake requires Ninja 1.11+ to build any target with
+                // modules, and this held true even with CMAKE_CXX_SCAN_FOR_MODULES=OFF.
+                // Overrides AGP's bundled Ninja with a modern one installed by
+                // .github/workflows/android.yml (NINJA_EXECUTABLE env var). Falls back to
+                // "ninja" (resolved via PATH) if unset, for local builds with a
+                // sufficiently new Ninja already on PATH.
                 def protocExecutable = System.getenv("PROTOC_EXECUTABLE") ?: "protoc"
-                arguments "-DANDROID_PLATFORM=android-30", "-DAURORA_DAWN_PROVIDER=vendor", "-DAURORA_DAWN_VERSION=v20260819.212523", "-DPROTOC_EXECUTABLE=${protocExecutable}", "-DCMAKE_CXX_SCAN_FOR_MODULES=OFF", "-DCMAKE_BUILD_TYPE=Release"
+                def ninjaExecutable = System.getenv("NINJA_EXECUTABLE") ?: "ninja"
+                arguments "-DANDROID_PLATFORM=android-30", "-DAURORA_DAWN_PROVIDER=vendor", "-DAURORA_DAWN_VERSION=v20260819.212523", "-DPROTOC_EXECUTABLE=${protocExecutable}", "-DCMAKE_CXX_SCAN_FOR_MODULES=OFF", "-DCMAKE_MAKE_PROGRAM=${ninjaExecutable}", "-DCMAKE_BUILD_TYPE=Release"
             }
         }
     }
