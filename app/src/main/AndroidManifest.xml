@@ -3,7 +3,10 @@
 
     <!-- App-private storage extraction target (Context.getFilesDir()) needs no
          special permission. WRITE/READ_EXTERNAL_STORAGE are deliberately NOT
-         requested - AssetExtractor only ever writes to app-private storage. -->
+         requested - AssetExtractor only ever writes to app-private storage,
+         and IsoLibrary's disc-image staging uses Storage Access Framework
+         (ACTION_OPEN_DOCUMENT), which needs no storage permission either -
+         the system grants per-file access directly through the picker. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- network_ios / DWC-related code (see runtime_group "network_ios" bucketing
          in runtime/cmake/PublicProducts.cmake) needs outbound network access. -->
@@ -19,16 +22,17 @@
         android:allowBackup="false"
         android:label="WiiCompiled"
         android:hardwareAccelerated="true"
-        android:supportsRtl="true">
+        android:supportsRtl="true"
+        android:theme="@style/Theme.WiiCompiled">
 
         <!-- Real launcher entry point: lets the user pick WiiCompiled or
              RetroRewind, mirroring the two separate .exe files the desktop
-             build produces. See ChooserActivity's own header comment. -->
+             build produces. See ChooserActivity's own header comment.
+             Also gates entry behind IsoLibrary's staged-disc-image check. -->
         <activity
             android:name="org.patchzyy.wiicompiled.ChooserActivity"
             android:label="WiiCompiled"
-            android:exported="true"
-            android:theme="@android:style/Theme.NoTitleBar">
+            android:exported="true">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -37,7 +41,10 @@
         </activity>
 
         <!-- Not a launcher entry - only ever started by ChooserActivity with
-             EXTRA_LIBRARY_NAME set. Hosts SDL's native game loop. -->
+             EXTRA_LIBRARY_NAME set. Hosts SDL's native game loop. Keeps its
+             own fullscreen theme rather than inheriting Theme.WiiCompiled,
+             since the game view has no use for Material chrome/status bar
+             theming once running. -->
         <activity
             android:name="org.patchzyy.wiicompiled.GameActivity"
             android:label="WiiCompiled"
