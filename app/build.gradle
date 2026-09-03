@@ -155,4 +155,23 @@ dependencies {
     // SDL3 is already vendored/fetched by aurora-main for the native side; no
     // separate Java-side SDL dependency is needed beyond the SDLActivity source
     // (added directly under src/main/java, see org/libsdl/app/).
+
+    // Added for ChooserActivity's Material 3 ISO-staging UI (see IsoLibrary.java).
+    // This project had no AndroidX dependency before this - see the new
+    // gradle.properties android.useAndroidX=true.
+    //
+    // 1.12.0 is the latest confirmed STABLE release as of this writing; Material
+    // Components for Android (the Views library used here, as opposed to Compose)
+    // entered maintenance mode following Google's 2026 Compose-first announcement,
+    // so newer 1.13.0/1.14.0 entries seen on Maven are snapshot/alpha builds, not
+    // stable releases - pin to 1.12.0 rather than chase those.
+    implementation 'com.google.android.material:material:1.12.0'
+
+    // ChooserActivity extends AppCompatActivity (needed for DynamicColors /
+    // Theme.Material3.DayNight support) rather than plain Activity.
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+
+    // registerForActivityResult(ActivityResultContracts.OpenDocument(), ...) for
+    // the SAF disc-image picker - this API lives in androidx.activity, not appcompat.
+    implementation 'androidx.activity:activity:1.9.3'
 }
