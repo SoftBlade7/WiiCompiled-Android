@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+        Base Material 3 theme. DayNight so values-night/themes.xml is picked
+        up automatically; dynamic color (Material You wallpaper-derived
+        palette) is applied via DynamicColors.applyToActivityIfAvailable()
+        in ChooserActivity itself rather than a values-v31 theme override,
+        since the Material Components library's dynamic color helper needs
+        to run after theme inflation anyway (see getting-started.md's
+        DynamicColors guidance) and this keeps the static-fallback palette
+        below as the single source of truth for pre-API-31 devices.
+
+        Material Components for Android (the Views library used here) is in
+        maintenance mode as of the 2026 Compose-first announcement - see
+        AGENTS - Material Components maintenance mode note - so this
+        targets Material 3 (Theme.Material3.*), not Material 3 Expressive,
+        which is Compose-only.
+    -->
+    <style name="Theme.WiiCompiled" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/md_theme_primary</item>
+        <item name="colorOnPrimary">@color/md_theme_onPrimary</item>
+        <item name="colorPrimaryContainer">@color/md_theme_primaryContainer</item>
+        <item name="colorOnPrimaryContainer">@color/md_theme_onPrimaryContainer</item>
+        <item name="colorSecondary">@color/md_theme_secondary</item>
+        <item name="colorOnSecondary">@color/md_theme_onSecondary</item>
+        <item name="colorSurface">@color/md_theme_surface</item>
+        <item name="colorOnSurface">@color/md_theme_onSurface</item>
+        <item name="colorSurfaceVariant">@color/md_theme_surfaceVariant</item>
+        <item name="colorOnSurfaceVariant">@color/md_theme_onSurfaceVariant</item>
+        <item name="colorError">@color/md_theme_error</item>
+        <item name="android:statusBarColor">@color/md_theme_surface</item>
+        <item name="android:navigationBarColor">@color/md_theme_surface</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="23">true</item>
+    </style>
+
+</resources>
