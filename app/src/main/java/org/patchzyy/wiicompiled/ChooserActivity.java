@@ -166,7 +166,15 @@ public class ChooserActivity extends AppCompatActivity {
 
     private View spacer(int height) {
         View view = new View(this);
-        view.setMinimumHeight(height);
+        // Explicit fixed-size LayoutParams, set directly rather than relying
+        // on LinearLayout's addView()-default-generated params: a bare View
+        // added via the 1-arg addView() overload was observed (via
+        // uiautomator dump) expanding to consume the rest of the screen's
+        // height instead of the intended fixed spacer height, which also
+        // silently prevented every subsequent addView() call in
+        // buildRootView() from actually appearing in the final layout.
+        view.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, height));
         return view;
     }
 
