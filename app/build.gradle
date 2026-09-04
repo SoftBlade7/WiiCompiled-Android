@@ -151,6 +151,54 @@ tasks.named("preBuild").configure {
     dependsOn "copyGameAssets"
 }
 
+// Stage 2 of the on-device translation pipeline (see AGENTS - on-device
+// translation pipeline / IsoLibrary.java): publishes Translator.Cli as a
+// self-contained linux-bionic-arm64 binary and stages it into
+// src/main/assets/translator/, so it ships inside the APK and can be
+// extracted + chmod +x + invoked via ProcessBuilder at first run (mirrors
+// AssetExtractor's staging pattern for wii_bootstrap/dsp_coef.bin/
+// initial_pipeline_cache.db).
+//
+// Built fresh from source on every build rather than a committed binary
+// artifact, so it can never silently drift out of sync with translator/
+// source changes - the same staleness risk that has bitten this project
+// before with committed generated/ output and with android.yml itself.
+//
+// Deliberately a plain self-contained (JIT, multi-file) publish, NOT
+// NativeAOT and NOT PublishSingleFile: linux-bionic-arm64 has multiple
+// documented bug reports specifically for NativeAOT and for
+// --self-contained + single-file combined (see dotnet/runtime#92272,
+// #101727, #87340, dotnet/sdk#35518). A plain self-contained publish of a
+// command-line executable is the better-supported case for this RID per
+// the official docs (runtime/src/coreclr/nativeaot/docs/android-bionic.md).
+// Confirmed working in CI (see .github/workflows/android.yml's
+// translator-bionic-publish job) before this task was written.
+tasks.register("bundleTranslatorCli", Exec) {
+    def translatorProject = "${projectDir}/../translator/src/Translator.Cli/Translator.Cli.csproj"
+    def publishDir = "${projectDir}/src/main/assets/translator"
+
+    inputs.file(translatorProject)
+    inputs.dir("${projectDir}/../translator/src")
+    outputs.dir(publishDir)
+
+    commandLine "dotnet", "publish", translatorProject,
+            "-c", "Release",
+            "-r", "linux-bionic-arm64",
+            "--self-contained", "true",
+            "-o", publishDir
+
+    doFirst {
+        // AGP's asset validation (see app.build's sourceSets comment) needs
+        // this to exist before Gradle's asset-merge step runs, same
+        // ordering requirement copyGameAssets already has.
+        new File(publishDir).mkdirs()
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn "bundleTranslatorCli"
+}
+
 dependencies {
     // SDL3 is already vendored/fetched by aurora-main for the native side; no
     // separate Java-side SDL dependency is needed beyond the SDLActivity source
