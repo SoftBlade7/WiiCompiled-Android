@@ -426,3 +426,101 @@ jobs:
           name: translator-cli-bionic-arm64
           path: /tmp/translator-bionic-publish
           if-no-files-found: warn
+
+  # Disc-extraction stage of the on-device translation pipeline (see AGENTS -
+  # on-device translation pipeline), upstream of translator-bionic-publish:
+  # ISO/RVZ/WBFS -> DOL/REL/filesystem, via nodtool (github.com/encounter/nod,
+  # MIT/Apache-2.0), the same tool Launcher/Build-Installer.ps1 already uses
+  # on the desktop build (`nodtool extract <disc> <outdir>`). nodtool is a
+  # Rust binary, not the raw Dolphin/DolphinTool codebase - Dolphin itself was
+  # never actually part of this pipeline, so there's no need to port any of
+  # Dolphin.
+  #
+  # Rust's aarch64-linux-android target (via rustup + cargo-ndk) is a
+  # mainstream, well-documented cross-compilation path against the Android
+  # NDK's own Clang/bionic toolchain - notably more mature than .NET's
+  # newer linux-bionic-arm64 RID used for Translator.Cli above, with far
+  # fewer open bug reports for the plain (non-AOT) case. Uses the same NDK
+  # version (r27c) as the rest of this workflow for consistency, though
+  # cargo-ndk does not strictly require matching it.
+  #
+  # Verification-only, same pattern as translator-bionic-publish: confirms
+  # the cross-compile actually works and produces a real aarch64 binary
+  # before any Android-side integration (extraction, staging, invocation)
+  # is built around it.
+  #
+  # KEEP IN SYNC: the version cloned below (v2.0.0-alpha.10) must match
+  # Launcher/WiiCompiled.Setup.Common/NodToolProvider.cs's Version constant -
+  # that file is this project's actual pin for the desktop build's own
+  # nodtool dependency, and this job exists to validate the same version
+  # cross-compiles for Android, not an independently chosen one.
+  nodtool-android-build:
+    name: nodtool cross-compile (aarch64-linux-android, verification only)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Android NDK
+        id: ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27c
+          local-cache: false
+
+      - name: Set up Rust with the aarch64-linux-android target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked
+
+      # Pinned to the exact same version this project's own desktop build
+      # already trusts (WiiCompiled.Setup.Common/NodToolProvider.cs's
+      # Version constant), rather than guessing a different tag - v14.3 was
+      # tried first and confirmed wrong (nod's real tags are semver, e.g.
+      # v1.0.0/v2.0.0-alpha.x, not a bare version-number scheme).
+      #
+      # NodToolProvider.cs already downloads a prebuilt nodtool-linux-aarch64
+      # release asset for desktop Linux arm64 - but that asset is a standard
+      # glibc-linked Linux binary, and Android's bionic libc is not
+      # glibc-ABI-compatible (different libc.so, different dynamic linker
+      # expectations), so it would almost certainly fail to run on-device
+      # with a linker error even though the CPU architecture matches. This
+      # is why a real NDK cross-compile targeting aarch64-linux-android
+      # specifically is still needed here, rather than just reusing that
+      # existing release asset.
+      - name: Clone nod (encounter/nod) at the version this project already pins
+        run: |
+          set -eu
+          git clone --depth 1 --branch v2.0.0-alpha.10 https://github.com/encounter/nod.git /tmp/nod-src
+
+      - name: Cross-compile nodtool for aarch64-linux-android
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        run: |
+          set -eu
+          cd /tmp/nod-src
+          cargo ndk -t arm64-v8a -o /tmp/nodtool-android-out build --release -p nodtool
+          echo "--- cargo-ndk output directory (jniLibs-style layout) ---"
+          find /tmp/nodtool-android-out -type f
+          echo "--- Raw cargo target directory (has the actual nodtool binary) ---"
+          find /tmp/nod-src/target/aarch64-linux-android -type f -name 'nodtool'
+
+      - name: Verify the cross-compiled binary is a real aarch64 ELF
+        run: |
+          set -eu
+          bin=$(find /tmp/nodtool-cargo-root -type f -name 'nodtool' | head -1)
+          test -n "$bin"
+          test -f "$bin"
+          echo "--- file(1) on the cross-compiled binary ---"
+          file "$bin"
+          file "$bin" | grep -qi "aarch64\|ARM aarch64" \
+            && echo "Confirmed: aarch64 binary produced." \
+            || { echo "::error::Cross-compiled nodtool is not aarch64 - target may not have applied correctly."; exit 1; }
+
+      - name: Upload cross-compiled nodtool artifact for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nodtool-aarch64-linux-android
+          path: /tmp/nodtool-cargo-root
+          if-no-files-found: warn
