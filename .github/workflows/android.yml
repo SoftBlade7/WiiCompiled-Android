@@ -31,6 +31,18 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
+      # Needed by app/build.gradle's bundleNodtool task, which cross-compiles
+      # nodtool (github.com/encounter/nod) for aarch64-linux-android during
+      # Gradle's preBuild - same tool/version/approach already verified
+      # working in this workflow's nodtool-android-build job.
+      - name: Set up Rust with the aarch64-linux-android target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked
+
       - name: Set up Android NDK
         id: ndk
         uses: nttld/setup-ndk@v1
