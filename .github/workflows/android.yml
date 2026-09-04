@@ -355,3 +355,64 @@ jobs:
             app/build/.cxx/**/CMakeError.log
             app/build/.cxx/**/CMakeOutput.log
           if-no-files-found: ignore
+
+  # Stage 2 of the on-device translation pipeline (see AGENTS - on-device
+  # translation pipeline): verifies Translator.Cli can be published as a
+  # self-contained linux-bionic-arm64 binary at all, before any Android-side
+  # integration is built around it. Fully independent of gradle-build - runs
+  # in its own job so a failure here can never affect or block the already-
+  # working native Dawn/gpu build.
+  #
+  # Deliberately NOT using NativeAOT or PublishSingleFile: linux-bionic-arm64
+  # has multiple open/historical bug reports specifically for NativeAOT
+  # publishing (missing _init/_fini symbols, PrivateSdkAssemblies errors) and
+  # for --self-contained combined with single-file (missing singlefilehost
+  # asset) - see dotnet/runtime#92272, #101727, #87340, dotnet/sdk#35518.
+  # Plain self-contained (JIT, multi-file) publish of a command-line
+  # executable is the documented, better-supported case for this RID
+  # (runtime/src/coreclr/nativeaot/docs/android-bionic.md explicitly calls
+  # out "shared libraries and command line executables" as supported since
+  # .NET 8 Preview 7), so that's what this verifies first.
+  translator-bionic-publish:
+    name: Translator.Cli publish (linux-bionic-arm64, self-contained, verification only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish Translator.Cli for linux-bionic-arm64
+        run: |
+          set -eu
+          dotnet publish translator/src/Translator.Cli/Translator.Cli.csproj \
+            -c Release \
+            -r linux-bionic-arm64 \
+            --self-contained true \
+            -o /tmp/translator-bionic-publish
+          echo "--- Publish output directory contents ---"
+          ls -la /tmp/translator-bionic-publish
+
+      - name: Verify the published binary exists and reports its architecture
+        run: |
+          set -eu
+          bin="/tmp/translator-bionic-publish/Translator.Cli"
+          test -f "$bin"
+          echo "--- file(1) on the published binary ---"
+          file "$bin"
+          echo "--- Confirming it's actually ELF/aarch64, not a stray host-arch artifact ---"
+          file "$bin" | grep -qi "aarch64\|ARM aarch64" \
+            && echo "Confirmed: aarch64 binary produced." \
+            || { echo "::error::Published binary is not aarch64 - RID may not have applied correctly."; exit 1; }
+
+      - name: Upload published Translator.Cli artifact for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: translator-cli-bionic-arm64
+          path: /tmp/translator-bionic-publish
+          if-no-files-found: warn
