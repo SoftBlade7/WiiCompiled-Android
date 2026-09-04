@@ -499,16 +499,23 @@ jobs:
         run: |
           set -eu
           cd /tmp/nod-src
-          cargo ndk -t arm64-v8a -o /tmp/nodtool-android-out build --release -p nodtool
-          echo "--- cargo-ndk output directory (jniLibs-style layout) ---"
-          find /tmp/nodtool-android-out -type f
-          echo "--- Raw cargo target directory (has the actual nodtool binary) ---"
+          # No -o flag: that triggers cargo-ndk's jniLibs-style copy step,
+          # which only handles cdylib targets (.so files meant for JNI) and
+          # fails on a plain binary crate with "No usable artifacts produced
+          # by cargo... Did you set the crate-type in Cargo.toml to include
+          # 'cdylib'?" - confirmed exactly that failure on the first run.
+          # nodtool is a binary, not a library; cargo-ndk still cross-compiles
+          # it correctly via the env vars it sets up, and cargo places the
+          # actual output in the normal per-target directory below, so the
+          # extra copy step isn't needed at all.
+          cargo ndk -t arm64-v8a build --release -p nodtool
+          echo "--- Cargo target directory for the cross-compiled binary ---"
           find /tmp/nod-src/target/aarch64-linux-android -type f -name 'nodtool'
 
       - name: Verify the cross-compiled binary is a real aarch64 ELF
         run: |
           set -eu
-          bin=$(find /tmp/nodtool-cargo-root -type f -name 'nodtool' | head -1)
+          bin=$(find /tmp/nod-src/target/aarch64-linux-android -type f -name 'nodtool' | head -1)
           test -n "$bin"
           test -f "$bin"
           echo "--- file(1) on the cross-compiled binary ---"
@@ -522,5 +529,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nodtool-aarch64-linux-android
-          path: /tmp/nodtool-cargo-root
+          path: /tmp/nod-src/target/aarch64-linux-android/release/nodtool
           if-no-files-found: warn
