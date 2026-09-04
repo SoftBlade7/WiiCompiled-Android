@@ -147,32 +147,32 @@ tasks.register("copyGameAssets", Copy) {
     into "${projectDir}/src/main/assets/game"
 }
 
-tasks.named("preBuild").configure {
-    dependsOn "copyGameAssets"
+// MAP.txt (Translator.Cli's translation.function_map input, see
+// TranslatorRunner.java) is project-specific config, not a build output -
+// bundled as its own asset tree rather than folded into copyGameAssets'
+// "game/" destination, since it's read by the on-device translation
+// pipeline rather than by the compiled runtime itself.
+tasks.register("copyTranslatorProjectAssets", Copy) {
+    from "${projectDir}/../projects/mkwii/MAP.txt"
+    into "${projectDir}/src/main/assets/translator_project"
 }
 
 // Stage 2 of the on-device translation pipeline (see AGENTS - on-device
-// translation pipeline / IsoLibrary.java): publishes Translator.Cli as a
-// self-contained linux-bionic-arm64 binary and stages it into
-// src/main/assets/translator/, so it ships inside the APK and can be
-// extracted + chmod +x + invoked via ProcessBuilder at first run (mirrors
-// AssetExtractor's staging pattern for wii_bootstrap/dsp_coef.bin/
-// initial_pipeline_cache.db).
+// translation pipeline / IsoLibrary.java, TranslatorRunner.java): publishes
+// Translator.Cli as a self-contained linux-bionic-arm64 binary and stages
+// it into src/main/assets/translator/, so it ships inside the APK and can
+// be extracted + chmod +x + invoked via ProcessBuilder at first run.
 //
 // Built fresh from source on every build rather than a committed binary
 // artifact, so it can never silently drift out of sync with translator/
-// source changes - the same staleness risk that has bitten this project
-// before with committed generated/ output and with android.yml itself.
+// source changes.
 //
 // Deliberately a plain self-contained (JIT, multi-file) publish, NOT
 // NativeAOT and NOT PublishSingleFile: linux-bionic-arm64 has multiple
 // documented bug reports specifically for NativeAOT and for
 // --self-contained + single-file combined (see dotnet/runtime#92272,
-// #101727, #87340, dotnet/sdk#35518). A plain self-contained publish of a
-// command-line executable is the better-supported case for this RID per
-// the official docs (runtime/src/coreclr/nativeaot/docs/android-bionic.md).
-// Confirmed working in CI (see .github/workflows/android.yml's
-// translator-bionic-publish job) before this task was written.
+// #101727, #87340, dotnet/sdk#35518). Confirmed working in CI (see
+// .github/workflows/android.yml's translator-bionic-publish job).
 tasks.register("bundleTranslatorCli", Exec) {
     def translatorProject = "${projectDir}/../translator/src/Translator.Cli/Translator.Cli.csproj"
     def publishDir = "${projectDir}/src/main/assets/translator"
@@ -188,15 +188,72 @@ tasks.register("bundleTranslatorCli", Exec) {
             "-o", publishDir
 
     doFirst {
-        // AGP's asset validation (see app.build's sourceSets comment) needs
-        // this to exist before Gradle's asset-merge step runs, same
-        // ordering requirement copyGameAssets already has.
         new File(publishDir).mkdirs()
     }
 }
 
+// Disc-extraction stage of the on-device translation pipeline, upstream of
+// bundleTranslatorCli: stages nodtool (github.com/encounter/nod,
+// MIT/Apache-2.0) into src/main/assets/nodtool/, the same tool this
+// project's desktop build already uses (see
+// Launcher/WiiCompiled.Setup.Common/NodToolProvider.cs).
+//
+// Clones nod's source and cross-compiles via cargo-ndk rather than a
+// single publish command (unlike bundleTranslatorCli above), so this needs
+// a small inline shell script rather than a bare Exec commandLine. Cached
+// under the Gradle project's build directory - re-runs only when the
+// pinned NODTOOL_VERSION below changes or the cache is cleared, since a
+// git clone + full Rust release build is far slower than dotnet publish's
+// incremental behavior.
+//
+// KEEP IN SYNC: the version below must match
+// Launcher/WiiCompiled.Setup.Common/NodToolProvider.cs's Version constant -
+// see .github/workflows/android.yml's nodtool-android-build job, which
+// verifies this same pinned version cross-compiles successfully.
+//
+// Requires ANDROID_NDK_HOME to be set and cargo-ndk + the
+// aarch64-linux-android Rust target to already be installed on the build
+// machine - confirmed available on CI (see android.yml), but NOT currently
+// auto-installed by this task itself.
+tasks.register("bundleNodtool", Exec) {
+    def nodtoolVersion = "v2.0.0-alpha.10"
+    def nodSourceCache = "${projectDir}/build/nodtool-src-cache"
+    def publishDir = "${projectDir}/src/main/assets/nodtool"
+    def ndkHome = System.getenv("ANDROID_NDK_HOME") ?: (android.ndkDirectory?.absolutePath ?: "")
+
+    outputs.dir(publishDir)
+
+    environment "ANDROID_NDK_HOME", ndkHome
+
+    commandLine "bash", "-c", """
+        set -eu
+        if [ -z "${ndkHome}" ]; then
+            echo "ANDROID_NDK_HOME is not set and android.ndkDirectory could not resolve one - cannot cross-compile nodtool." >&2
+            exit 1
+        fi
+        marker="${publishDir}/.nodtool-version"
+        if [ -f "\$marker" ] && [ "\$(cat "\$marker")" = "${nodtoolVersion}" ] && [ -x "${publishDir}/nodtool" ]; then
+            echo "nodtool ${nodtoolVersion} already built and staged, skipping."
+            exit 0
+        fi
+        if [ ! -d "${nodSourceCache}/.git" ]; then
+            rm -rf "${nodSourceCache}"
+            git clone --depth 1 --branch ${nodtoolVersion} https://github.com/encounter/nod.git "${nodSourceCache}"
+        fi
+        cd "${nodSourceCache}"
+        cargo ndk -t arm64-v8a build --release -p nodtool
+        mkdir -p "${publishDir}"
+        cp "${nodSourceCache}/target/aarch64-linux-android/release/nodtool" "${publishDir}/nodtool"
+        chmod +x "${publishDir}/nodtool"
+        echo "${nodtoolVersion}" > "\$marker"
+    """
+}
+
 tasks.named("preBuild").configure {
+    dependsOn "copyGameAssets"
+    dependsOn "copyTranslatorProjectAssets"
     dependsOn "bundleTranslatorCli"
+    dependsOn "bundleNodtool"
 }
 
 dependencies {
