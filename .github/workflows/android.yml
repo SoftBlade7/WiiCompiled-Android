@@ -21,6 +21,16 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # Translator.Cli is now bundled into the APK as an asset (see
+      # app/build.gradle's bundleTranslatorCli task), published fresh from
+      # source on every build rather than committed as a binary artifact, so
+      # it can never drift out of sync with translator/ source changes. This
+      # needs the .NET SDK available before Gradle's preBuild runs.
+      - name: Set up .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
       - name: Set up Android NDK
         id: ndk
         uses: nttld/setup-ndk@v1
