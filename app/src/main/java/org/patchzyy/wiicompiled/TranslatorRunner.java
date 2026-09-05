@@ -17,17 +17,30 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Orchestrates the on-device translation pipeline (see AGENTS - on-device
- * translation pipeline): the bundled nodtool (see app/build.gradle's
- * bundleNodtool task) extracts the disc image IsoLibrary already staged,
- * this class locates the resulting main.dol/StaticR.rel by filename (their
- * exact path within nodtool's output tree was not confirmed against a real
- * extraction before this was written, so this searches rather than assumes
- * a fixed layout), verifies them against projects/mkwii/recomp.yml's pinned
- * SHA-256 hashes, then drives the bundled Translator.Cli (see
- * bundleTranslatorCli) through its translate-recursive / generate-data-init
- * / emit-build-shards chain against a rewritten copy of that manifest whose
+ * translation pipeline): nodtool extracts the disc image IsoLibrary already
+ * staged, this class locates the resulting main.dol/StaticR.rel by filename
+ * (their exact path within nodtool's output tree was not confirmed against
+ * a real extraction before this was written, so this searches rather than
+ * assumes a fixed layout), verifies them against
+ * projects/mkwii/recomp.yml's pinned SHA-256 hashes, then drives
+ * Translator.Cli through its translate-recursive / generate-data-init /
+ * emit-build-shards chain against a rewritten copy of that manifest whose
  * paths point at this run's actual on-device staging directory rather than
  * the committed manifest's fixed repo-relative paths.
+ *
+ * nodtool and Translator.Cli's apphost/.so runtime files are invoked
+ * directly from Context.getApplicationInfo().nativeLibraryDir, NOT staged
+ * from assets into getFilesDir() - a real on-device test confirmed Android's
+ * W^X SELinux enforcement denies execute_no_trans (and the equivalent
+ * dlopen() permission) for any binary living under assets-derived
+ * app-private storage, on any non-rooted Android 10+ device. See
+ * app/build.gradle's bundleNodtool/bundleTranslatorCli tasks, which stage
+ * these under jniLibs/arm64-v8a/lib*.so instead, so PackageManager extracts
+ * them into nativeLibraryDir (a different, execution-permitted SELinux
+ * context) at install time - this is Android's own sanctioned mechanism for
+ * shipping native executables. Only Translator.Cli's managed .dll files
+ * (plain data read by the CoreCLR runtime once it's already running) still
+ * come from assets/.
  *
  * Scope: WiiCompiled (Mario Kart Wii) only. RetroRewind's profile in
  * recomp.yml requires an additional Code.pul Kamek mod-patch file that
@@ -97,8 +110,36 @@ final class TranslatorRunner {
             throw new TranslationException("Could not create the translation workspace directory.");
         }
 
-        File nodtool = stageExecutableAsset(context, "nodtool/nodtool", "nodtool");
-        File translatorRoot = stageTranslatorCli(context);
+        // nodtool and Translator.Cli's apphost + .NET runtime .so files
+        // (libhostfxr.so, libhostpolicy.so, libcoreclr.so, etc.) are NOT
+        // staged from assets into getFilesDir() here - a real on-device
+        // test confirmed Android's W^X SELinux enforcement denies
+        // execute_no_trans for any binary living under assets-derived
+        // app-private storage ("avc: denied { execute_no_trans } ...
+        // tcontext=u:object_r:app_data_file:s0"), and the same restriction
+        // blocks the dlopen() calls the apphost makes internally to load
+        // hostfxr/hostpolicy/coreclr. Instead, app/build.gradle's
+        // bundleNodtool/bundleTranslatorCli tasks stage these as
+        // jniLibs/arm64-v8a/lib*.so, which PackageManager extracts at
+        // install time into ApplicationInfo.nativeLibraryDir with a
+        // different, execution-permitted SELinux context - this is
+        // Android's own sanctioned mechanism for shipping native
+        // executables, not a workaround. Managed .dll files are still
+        // staged from assets/ as before, since they're read as plain data
+        // by the CoreCLR runtime once it's running, never dlopen()'d or
+        // execve()'d directly.
+        String nativeLibDir = context.getApplicationInfo().nativeLibraryDir;
+        File nodtool = new File(nativeLibDir, "libnodtool.so");
+        File translatorApphost = new File(nativeLibDir, "libtranslator.so");
+        if (!nodtool.exists()) {
+            throw new TranslationException(
+                    "nodtool is missing from this build's native libraries (" + nodtool + ").");
+        }
+        if (!translatorApphost.exists()) {
+            throw new TranslationException(
+                    "Translator.Cli is missing from this build's native libraries (" + translatorApphost + ").");
+        }
+        File translatorDllDir = stageTranslatorManagedFiles(context);
 
         listener.onStage("Extracting disc image\u2026");
         runProcess(listener, nodtool.getAbsolutePath(), "extract",
@@ -137,19 +178,19 @@ final class TranslatorRunner {
         stageAsset(context, "translator_project/MAP.txt", new File(workspaceRoot, "MAP.txt"));
         File manifest = writeRewrittenManifest(workspaceRoot);
 
-        String translatorDll = new File(translatorRoot, "Translator.Cli.dll").getAbsolutePath();
-        String dotnet = findDotnetRuntimeExecutable(translatorRoot);
+        String translatorDll = new File(translatorDllDir, "Translator.Cli.dll").getAbsolutePath();
+        String apphost = translatorApphost.getAbsolutePath();
 
         listener.onStage("Translating game code (this takes a while)\u2026");
-        runProcess(listener, dotnet, translatorDll,
+        runProcess(listener, apphost, translatorDll,
                 "translate-recursive", "0x800060A4", "--project", manifest.getAbsolutePath());
 
         listener.onStage("Generating data section initializer\u2026");
-        runProcess(listener, dotnet, translatorDll,
+        runProcess(listener, apphost, translatorDll,
                 "generate-data-init", "--project", manifest.getAbsolutePath());
 
         listener.onStage("Emitting native build graph\u2026");
-        runProcess(listener, dotnet, translatorDll,
+        runProcess(listener, apphost, translatorDll,
                 "emit-build-shards", "--project", manifest.getAbsolutePath());
 
         listener.onStage("Translation complete.");
@@ -229,68 +270,25 @@ final class TranslatorRunner {
 
     // ---- Asset staging --------------------------------------------------------
 
-    /** Stages a bundled asset tree (e.g. nodtool's self-contained publish output) into filesDir. */
-    private static File stageExecutableAsset(Context context, String assetPath, String executableName)
-            throws TranslationException {
-        File dest = new File(context.getFilesDir(), "tools/" + executableName);
-        stageAsset(context, assetPath, dest);
-        if (!dest.setExecutable(true, false)) {
-            throw new TranslationException("Could not mark " + executableName + " as executable.");
-        }
-        return dest;
-    }
-
-    /** Stages Translator.Cli's whole self-contained publish directory (many files, not just the entry DLL). */
-    private static File stageTranslatorCli(Context context) throws TranslationException {
+    /**
+     * Stages Translator.Cli's managed files (Translator.Cli.dll,
+     * Translator.Core.dll, .deps.json, .runtimeconfig.json, etc.) from
+     * assets/translator/ into filesDir. Does NOT include the apphost or any
+     * .so runtime files - those are read directly from
+     * ApplicationInfo.nativeLibraryDir instead (see this class's header
+     * comment and app/build.gradle's bundleTranslatorCli task), since they
+     * would hit Android's W^X SELinux enforcement if staged here. Plain
+     * managed DLLs are just data the CoreCLR runtime reads once it's
+     * already running, so W^X has no opinion about them.
+     */
+    private static File stageTranslatorManagedFiles(Context context) throws TranslationException {
         File dest = new File(context.getFilesDir(), "tools/translator");
         try {
             copyAssetTree(context, "translator", dest);
         } catch (IOException e) {
-            throw new TranslationException("Could not stage Translator.Cli.", e);
-        }
-        // The self-contained publish includes its own apphost (Translator.Cli,
-        // no extension) as well as the portable Translator.Cli.dll - mark
-        // everything executable defensively since we invoke via the bundled
-        // dotnet host below rather than the apphost directly (the apphost is
-        // built for its publish RID's expected launch convention, and
-        // invoking the .dll through a located dotnet executable is more
-        // robust to however the self-contained output actually lays out).
-        File[] children = dest.listFiles();
-        if (children != null) {
-            for (File child : children) {
-                //noinspection ResultOfMethodCallIgnored
-                child.setExecutable(true, false);
-            }
+            throw new TranslationException("Could not stage Translator.Cli's managed files.", e);
         }
         return dest;
-    }
-
-    /**
-     * Self-contained .NET publishes bundle their own apphost/runtime rather
-     * than relying on a system-installed dotnet - but the actual runtime
-     * launcher binary's exact name varies by publish shape. Searches the
-     * staged Translator.Cli directory for it rather than assuming, same
-     * reasoning as searching for main.dol/StaticR.rel above rather than
-     * assuming nodtool's layout.
-     */
-    private static String findDotnetRuntimeExecutable(File translatorRoot) throws TranslationException {
-        File apphost = new File(translatorRoot, "Translator.Cli");
-        if (apphost.exists() && apphost.canExecute()) {
-            return apphost.getAbsolutePath();
-        }
-        // Fall back to invoking the portable .dll through whatever
-        // "dotnet"-named executable shipped in the self-contained output,
-        // if the apphost itself isn't directly runnable here.
-        File[] children = translatorRoot.listFiles();
-        if (children != null) {
-            for (File child : children) {
-                if (child.getName().equals("dotnet") || child.getName().equalsIgnoreCase("dotnet.exe")) {
-                    return child.getAbsolutePath();
-                }
-            }
-        }
-        throw new TranslationException(
-                "Could not find a runnable Translator.Cli launcher in the staged self-contained publish.");
     }
 
     private static File findSingleFileByName(File root, String name) {
