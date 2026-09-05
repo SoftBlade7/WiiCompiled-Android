@@ -330,8 +330,88 @@ public class ChooserActivity extends AppCompatActivity {
     // ---- Launching ----------------------------------------------------------
 
     private void launchGame(String libraryName) {
+        if ("wiicompiled".equals(libraryName)) {
+            // Stage 2 of the on-device translation pipeline (see AGENTS - on-
+            // device translation pipeline / TranslatorRunner.java) - runs
+            // nodtool extraction + Translator.Cli translation against the
+            // staged disc image before anything else. RetroRewind is NOT
+            // routed through this: it needs an additional Code.pul file not
+            // present on the disc (see TranslatorRunner's header comment),
+            // which isn't handled yet, so it still launches the APK-bundled
+            // prebuilt library directly below.
+            runTranslationThenReport();
+            return;
+        }
         Intent intent = new Intent(ChooserActivity.this, GameActivity.class);
         intent.putExtra(EXTRA_LIBRARY_NAME, libraryName);
         startActivity(intent);
+    }
+
+    private void runTranslationThenReport() {
+        setAllButtonsEnabled(false);
+        progressGroup.setVisibility(View.VISIBLE);
+        progressBar.setIndeterminate(true);
+        statusText.setText(R.string.translation_starting);
+
+        stagingExecutor.execute(() -> {
+            try {
+                TranslatorRunner.runWiiCompiledTranslation(this, new TranslatorRunner.ProgressListener() {
+                    @Override
+                    public void onStage(String stageDescription) {
+                        mainHandler.post(() -> statusText.setText(stageDescription));
+                    }
+
+                    @Override
+                    public void onOutputLine(String line) {
+                        // Logged by TranslatorRunner itself (Log.i, TAG
+                        // "WiiCompiled") - not surfaced in this status line,
+                        // which only shows the current coarse stage. A
+                        // scrolling raw-output view would be a reasonable
+                        // follow-up if users need to see individual
+                        // translated-function progress, but isn't built yet.
+                    }
+                });
+                mainHandler.post(this::onTranslationSucceeded);
+            } catch (TranslatorRunner.TranslationException e) {
+                mainHandler.post(() -> onTranslationFailed(e));
+            }
+        });
+    }
+
+    private void onTranslationSucceeded() {
+        progressGroup.setVisibility(View.GONE);
+        setAllButtonsEnabled(true);
+        // Stage 3 (on-device native compile of the translated output) and
+        // Stage 4 (loading the freshly built library) don't exist yet - a
+        // successful translation run only produces generated/ C++ source
+        // under the app's private storage, not a playable game. Say so
+        // plainly rather than silently returning to the chooser screen,
+        // which would look like nothing happened, or launching the
+        // untranslated prebuilt library, which would misrepresent what
+        // just ran.
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.translation_succeeded_title)
+                .setMessage(R.string.translation_succeeded_message)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+        refreshStagingState();
+    }
+
+    private void onTranslationFailed(TranslatorRunner.TranslationException e) {
+        progressGroup.setVisibility(View.GONE);
+        setAllButtonsEnabled(true);
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.translation_failed_title)
+                .setMessage(e.getMessage() != null ? e.getMessage() : e.toString())
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+        refreshStagingState();
+    }
+
+    private void setAllButtonsEnabled(boolean enabled) {
+        pickIsoButton.setEnabled(enabled);
+        changeIsoButton.setEnabled(enabled);
+        launchWiiCompiledButton.setEnabled(enabled);
+        launchRetroRewindButton.setEnabled(enabled);
     }
 }
