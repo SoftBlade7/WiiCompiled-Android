@@ -16,4 +16,9 @@
 
     <string name="launch_mario_kart_wii">Mario Kart Wii</string>
     <string name="launch_retro_rewind">Retro Rewind</string>
+
+    <string name="translation_starting">Starting translation\u2026</string>
+    <string name="translation_succeeded_title">Translation complete</string>
+    <string name="translation_succeeded_message">The disc image was extracted and translated successfully. This build doesn\'t yet compile or run the translated game on-device \u2014 that\'s still being worked on.</string>
+    <string name="translation_failed_title">Translation failed</string>
 </resources>
