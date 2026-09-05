@@ -208,7 +208,7 @@ tasks.register("bundleTranslatorCli", Exec) {
     def translatorProject = "${projectDir}/../translator/src/Translator.Cli/Translator.Cli.csproj"
     def publishDir = "${projectDir}/build/translator-publish"
     def assetsDir = "${projectDir}/src/main/assets/translator"
-    def jniLibsDir = "${projectDir}/src/main/jniLibs/arm64"
+    def jniLibsDir = "${projectDir}/src/main/jniLibs/arm64-v8"
 
     inputs.file(translatorProject)
     inputs.dir("${projectDir}/../translator/src")
