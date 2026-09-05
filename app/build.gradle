@@ -209,50 +209,25 @@ tasks.register("bundleTranslatorCli", Exec) {
     def publishDir = "${projectDir}/build/translator-publish"
     def assetsDir = "${projectDir}/src/main/assets/translator"
     def jniLibsDir = "${projectDir}/src/main/jniLibs/arm64-v8a"
+    def scriptFile = "${projectDir}/../app_scripts/bundle-translator-cli.sh"
 
     inputs.file(translatorProject)
     inputs.dir("${projectDir}/../translator/src")
+    inputs.file(scriptFile)
     outputs.dir(assetsDir)
     outputs.dir(jniLibsDir)
 
-    commandLine "bash", "-c", """
-        set -eu
-        rm -rf "${publishDir}"
-        mkdir -p "${publishDir}" "${assetsDir}" "${jniLibsDir}"
-        dotnet publish "${translatorProject}" \\
-            -c Release \\
-            -r linux-bionic-arm64 \\
-            --self-contained true \\
-            -o "${publishDir}"
-        test -f "${publishDir}/Translator.Cli"
-
-        # Move every real ELF .so in the publish output to jniLibs - these
-        # are dlopen()'d by the apphost/hostfxr chain at runtime and must
-        # not be left under assets/ (see comment above). find -exec file
-        # rather than a bare *.so glob, since a couple of .NET's host
-        # libraries are occasionally shipped without a "lib" prefix or
-        # with unusual naming depending on publish shape - checking actual
-        # ELF magic bytes is more robust than trusting the filename alone.
-        find "${publishDir}" -maxdepth 1 -type f -name '*.so' -print0 |
-        while IFS= read -r -d '' so; do
-            cp "\$so" "${jniLibsDir}/"
-        done
-
-        # The apphost itself has no .so extension or "lib" prefix by
-        # default (dotnet publish names it after the project, "Translator.Cli"
-        # on non-Windows) - rename it to fit AGP's jniLibs naming
-        # convention (lib*.so) so PackageManager recognizes and extracts
-        # it into nativeLibraryDir at install time.
-        cp "${publishDir}/Translator.Cli" "${jniLibsDir}/libtranslator.so"
-        chmod +x "${jniLibsDir}"/*.so
-
-        # Everything else (managed .dll files, .json config, etc.) stays
-        # under assets/ as plain data files.
-        rm -rf "${assetsDir}"
-        mkdir -p "${assetsDir}"
-        cp -r "${publishDir}"/* "${assetsDir}/"
-        rm -f "${assetsDir}/Translator.Cli" "${assetsDir}"/*.so
-    """
+    // A standalone script file, NOT an inline Groovy triple-quoted bash
+    // string - the inline version silently truncated partway through on
+    // real CI runs (dotnet publish completed successfully, but every line
+    // after it never ran and never appeared in the log, no error reported
+    // by either bash or Gradle). Leading suspect: nested-quote collision
+    // between Groovy's own "${...}" GString interpolation and escaped
+    // \$(...) bash constructs living in the same triple-quoted string. A
+    // real script file sidesteps that whole class of problem entirely,
+    // since Gradle just hands it to bash with no string-literal
+    // interpretation of its contents in between.
+    commandLine "bash", scriptFile, translatorProject, publishDir, assetsDir, jniLibsDir
 }
 
 // Disc-extraction stage of the on-device translation pipeline, upstream of
@@ -261,12 +236,12 @@ tasks.register("bundleTranslatorCli", Exec) {
 // uses (see Launcher/WiiCompiled.Setup.Common/NodToolProvider.cs).
 //
 // Clones nod's source and cross-compiles via cargo-ndk rather than a
-// single publish command (unlike bundleTranslatorCli above), so this needs
-// a small inline shell script rather than a bare Exec commandLine. Cached
-// under the Gradle project's build directory - re-runs only when the
-// pinned NODTOOL_VERSION below changes or the cache is cleared, since a
-// git clone + full Rust release build is far slower than dotnet publish's
-// incremental behavior.
+// single publish command (unlike bundleTranslatorCli above), so this uses
+// its own script file (app_scripts/bundle-nodtool.sh) rather than a bare
+// Exec commandLine. Cached under the Gradle project's build directory -
+// re-runs only when the pinned NODTOOL_VERSION below changes or the cache
+// is cleared, since a git clone + full Rust release build is far slower
+// than dotnet publish's incremental behavior.
 //
 // KEEP IN SYNC: the version below must match
 // Launcher/WiiCompiled.Setup.Common/NodToolProvider.cs's Version constant -
@@ -287,33 +262,18 @@ tasks.register("bundleNodtool", Exec) {
     def nodSourceCache = "${projectDir}/build/nodtool-src-cache"
     def jniLibsDir = "${projectDir}/src/main/jniLibs/arm64-v8a"
     def ndkHome = System.getenv("ANDROID_NDK_HOME") ?: (android.ndkDirectory?.absolutePath ?: "")
+    def scriptFile = "${projectDir}/../app_scripts/bundle-nodtool.sh"
 
     outputs.file("${jniLibsDir}/libnodtool.so")
+    inputs.file(scriptFile)
 
-    environment "ANDROID_NDK_HOME", ndkHome
-
-    commandLine "bash", "-c", """
-        set -eu
-        if [ -z "${ndkHome}" ]; then
-            echo "ANDROID_NDK_HOME is not set and android.ndkDirectory could not resolve one - cannot cross-compile nodtool." >&2
-            exit 1
-        fi
-        mkdir -p "${jniLibsDir}"
-        marker="${jniLibsDir}/.nodtool-version"
-        if [ -f "\$marker" ] && [ "\$(cat "\$marker")" = "${nodtoolVersion}" ] && [ -x "${jniLibsDir}/libnodtool.so" ]; then
-            echo "nodtool ${nodtoolVersion} already built and staged, skipping."
-            exit 0
-        fi
-        if [ ! -d "${nodSourceCache}/.git" ]; then
-            rm -rf "${nodSourceCache}"
-            git clone --depth 1 --branch ${nodtoolVersion} https://github.com/encounter/nod.git "${nodSourceCache}"
-        fi
-        cd "${nodSourceCache}"
-        cargo ndk -t arm64-v8a build --release -p nodtool
-        cp "${nodSourceCache}/target/aarch64-linux-android/release/nodtool" "${jniLibsDir}/libnodtool.so"
-        chmod +x "${jniLibsDir}/libnodtool.so"
-        echo "${nodtoolVersion}" > "\$marker"
-    """
+    // A standalone script file, NOT an inline Groovy triple-quoted bash
+    // string - see bundleTranslatorCli's comment above for why (the inline
+    // version silently truncated partway through on real CI runs: cargo
+    // ndk build completed successfully, but the cp/chmod/marker-write
+    // lines after it never ran and never appeared in the log, no error
+    // from either bash or Gradle).
+    commandLine "bash", scriptFile, nodtoolVersion, nodSourceCache, jniLibsDir, ndkHome
 }
 
 tasks.named("preBuild").configure {
