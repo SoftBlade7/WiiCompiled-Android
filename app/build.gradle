@@ -323,6 +323,28 @@ tasks.named("preBuild").configure {
     dependsOn "bundleNodtool"
 }
 
+// preBuild.dependsOn above is NOT sufficient on its own: AGP's own
+// mergeDebugJniLibFolders/mergeReleaseJniLibFolders task (the one that
+// actually packages jniLibs/ content into the APK) resolves its input file
+// list independently, and can run - or have its inputs already resolved -
+// before bundleNodtool/bundleTranslatorCli finish writing into
+// src/main/jniLibs/, silently packaging an empty directory while the build
+// still reports overall success. Confirmed via a real device test: the
+// build succeeded, but lib/arm64/ in the installed APK was empty.
+//
+// This is a known, previously-reported class of bug for exactly this
+// pattern (see mozilla/rust-android-gradle#85, a Rust-cross-compile-into-
+// jniLibs plugin that hit the identical race) - the confirmed fix there,
+// applied the same way here, is to make the merge task itself explicitly
+// depend on the tasks that populate jniLibs, rather than relying on
+// preBuild ordering alone.
+tasks.whenTaskAdded { task ->
+    if (task.name == "mergeDebugJniLibFolders" || task.name == "mergeReleaseJniLibFolders") {
+        task.dependsOn "bundleNodtool"
+        task.dependsOn "bundleTranslatorCli"
+    }
+}
+
 dependencies {
     // SDL3 is already vendored/fetched by aurora-main for the native side; no
     // separate Java-side SDL dependency is needed beyond the SDLActivity source
