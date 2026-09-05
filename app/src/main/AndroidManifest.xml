@@ -18,12 +18,25 @@
         android:name="android.hardware.touchscreen"
         android:required="false" />
 
+    <!-- extractNativeLibs="true": required for nodtool/Translator.Cli's apphost to be
+         execve()-able at all (see TranslatorRunner.java, app/build.gradle's
+         bundleNodtool/bundleTranslatorCli tasks). minSdk 30 is above the API 23
+         threshold where AGP defaults this to "false" - meaning .so files stay
+         zipped inside the APK and are mmap-loaded in place, NEVER copied to a real
+         on-disk path under ApplicationInfo.nativeLibraryDir. Confirmed as the real
+         root cause of "nodtool is missing from this build's native libraries" by
+         directly inspecting a CI-built APK (all .so files correctly present inside
+         it) alongside the same build's on-device nativeLibraryDir (confirmed
+         empty) - exactly what extractNativeLibs="false" (AGP's silent default here)
+         predicts. Without this, nodtool/the apphost have no real file path to
+         execve() at runtime no matter how correctly they're bundled into the APK. -->
     <application
         android:allowBackup="false"
         android:label="WiiCompiled"
         android:hardwareAccelerated="true"
         android:supportsRtl="true"
-        android:theme="@style/Theme.WiiCompiled">
+        android:theme="@style/Theme.WiiCompiled"
+        android:extractNativeLibs="true">
 
         <!-- Real launcher entry point: lets the user pick WiiCompiled or
              RetroRewind, mirroring the two separate .exe files the desktop
