@@ -127,9 +127,22 @@ android {
     // app/src/main/assets/ by a Gradle task (see copyGameAssets below) rather than
     // committed twice, since runtime/assets/ already holds the source copies used
     // by the desktop build.
+    //
+    // jniLibs.srcDirs is added for a completely different reason: nodtool and
+    // Translator.Cli's native launcher + runtime .so files (libhostfxr.so,
+    // libhostpolicy.so, libcoreclr.so, etc.) CANNOT be executed or dlopen()'d
+    // from assets-derived app-private storage on Android 10+ - confirmed via a
+    // real on-device test that hit SELinux's W^X enforcement directly
+    // ("avc: denied { execute_no_trans } ... scontext=u:r:untrusted_app").
+    // Files under ApplicationInfo.nativeLibraryDir get a different SELinux
+    // label and are exempt - this is Android's own sanctioned mechanism for
+    // shipping native code, not a workaround. See bundleNodtool/
+    // bundleTranslatorCli below and TranslatorRunner.java, which invokes
+    // everything via nativeLibraryDir instead of a path under getFilesDir().
     sourceSets {
         main {
             assets.srcDirs += "src/main/assets"
+            jniLibs.srcDirs += "src/main/jniLibs"
         }
     }
 }
@@ -159,9 +172,7 @@ tasks.register("copyTranslatorProjectAssets", Copy) {
 
 // Stage 2 of the on-device translation pipeline (see AGENTS - on-device
 // translation pipeline / IsoLibrary.java, TranslatorRunner.java): publishes
-// Translator.Cli as a self-contained linux-bionic-arm64 binary and stages
-// it into src/main/assets/translator/, so it ships inside the APK and can
-// be extracted + chmod +x + invoked via ProcessBuilder at first run.
+// Translator.Cli as a self-contained linux-bionic-arm64 binary.
 //
 // Built fresh from source on every build rather than a committed binary
 // artifact, so it can never silently drift out of sync with translator/
@@ -173,30 +184,81 @@ tasks.register("copyTranslatorProjectAssets", Copy) {
 // --self-contained + single-file combined (see dotnet/runtime#92272,
 // #101727, #87340, dotnet/sdk#35518). Confirmed working in CI (see
 // .github/workflows/android.yml's translator-bionic-publish job).
+//
+// IMPORTANT: not just the apphost - EVERY .so file in the self-contained
+// publish output (libhostfxr.so, libhostpolicy.so, libcoreclr.so,
+// libclrjit.so, and others) is moved to jniLibs/arm64-v8a/, not just
+// Translator.Cli's own entry executable. The apphost doesn't exec() a
+// separate process for these - it dlopen()s them in-process as part of
+// the hostfxr -> hostpolicy -> coreclr chain (confirmed via .NET's own
+// host-components design docs) - but dlopen() on a file staged under
+// assets-derived app-private storage hits the exact same SELinux W^X
+// "execute" denial as execve() does, just one level deeper into startup
+// instead of failing immediately. Renaming every .so with a "lib" prefix
+// (already true for .NET's own naming - libhostfxr.so etc. ship prefixed
+// already, only the apphost itself needed renaming) and staging all of
+// them under jniLibs/arm64-v8a/ is required for the whole chain to work,
+// not just the first exec.
+//
+// Only the managed .dll files (pure IL bytecode, opened and read by the
+// CoreCLR runtime's own file I/O once it's already running - never
+// dlopen()'d or execve()'d by anything) stay under assets/translator/,
+// where they're just data files W^X has no opinion about.
 tasks.register("bundleTranslatorCli", Exec) {
     def translatorProject = "${projectDir}/../translator/src/Translator.Cli/Translator.Cli.csproj"
-    def publishDir = "${projectDir}/src/main/assets/translator"
+    def publishDir = "${projectDir}/build/translator-publish"
+    def assetsDir = "${projectDir}/src/main/assets/translator"
+    def jniLibsDir = "${projectDir}/src/main/jniLibs/arm64-v8a"
 
     inputs.file(translatorProject)
     inputs.dir("${projectDir}/../translator/src")
-    outputs.dir(publishDir)
+    outputs.dir(assetsDir)
+    outputs.dir(jniLibsDir)
 
-    commandLine "dotnet", "publish", translatorProject,
-            "-c", "Release",
-            "-r", "linux-bionic-arm64",
-            "--self-contained", "true",
-            "-o", publishDir
+    commandLine "bash", "-c", """
+        set -eu
+        rm -rf "${publishDir}"
+        mkdir -p "${publishDir}" "${assetsDir}" "${jniLibsDir}"
+        dotnet publish "${translatorProject}" \\
+            -c Release \\
+            -r linux-bionic-arm64 \\
+            --self-contained true \\
+            -o "${publishDir}"
+        test -f "${publishDir}/Translator.Cli"
 
-    doFirst {
-        new File(publishDir).mkdirs()
-    }
+        # Move every real ELF .so in the publish output to jniLibs - these
+        # are dlopen()'d by the apphost/hostfxr chain at runtime and must
+        # not be left under assets/ (see comment above). find -exec file
+        # rather than a bare *.so glob, since a couple of .NET's host
+        # libraries are occasionally shipped without a "lib" prefix or
+        # with unusual naming depending on publish shape - checking actual
+        # ELF magic bytes is more robust than trusting the filename alone.
+        find "${publishDir}" -maxdepth 1 -type f -name '*.so' -print0 |
+        while IFS= read -r -d '' so; do
+            cp "\$so" "${jniLibsDir}/"
+        done
+
+        # The apphost itself has no .so extension or "lib" prefix by
+        # default (dotnet publish names it after the project, "Translator.Cli"
+        # on non-Windows) - rename it to fit AGP's jniLibs naming
+        # convention (lib*.so) so PackageManager recognizes and extracts
+        # it into nativeLibraryDir at install time.
+        cp "${publishDir}/Translator.Cli" "${jniLibsDir}/libtranslator.so"
+        chmod +x "${jniLibsDir}"/*.so
+
+        # Everything else (managed .dll files, .json config, etc.) stays
+        # under assets/ as plain data files.
+        rm -rf "${assetsDir}"
+        mkdir -p "${assetsDir}"
+        cp -r "${publishDir}"/* "${assetsDir}/"
+        rm -f "${assetsDir}/Translator.Cli" "${assetsDir}"/*.so
+    """
 }
 
 // Disc-extraction stage of the on-device translation pipeline, upstream of
 // bundleTranslatorCli: stages nodtool (github.com/encounter/nod,
-// MIT/Apache-2.0) into src/main/assets/nodtool/, the same tool this
-// project's desktop build already uses (see
-// Launcher/WiiCompiled.Setup.Common/NodToolProvider.cs).
+// MIT/Apache-2.0), the same tool this project's desktop build already
+// uses (see Launcher/WiiCompiled.Setup.Common/NodToolProvider.cs).
 //
 // Clones nod's source and cross-compiles via cargo-ndk rather than a
 // single publish command (unlike bundleTranslatorCli above), so this needs
@@ -215,13 +277,18 @@ tasks.register("bundleTranslatorCli", Exec) {
 // aarch64-linux-android Rust target to already be installed on the build
 // machine - confirmed available on CI (see android.yml), but NOT currently
 // auto-installed by this task itself.
+//
+// IMPORTANT: placed under jniLibs/arm64-v8a/ as libnodtool.so, NOT
+// assets/ - same W^X SELinux workaround as bundleTranslatorCli's apphost
+// above. nodtool is a single self-contained binary with no separate data
+// files to stage, unlike Translator.Cli.
 tasks.register("bundleNodtool", Exec) {
     def nodtoolVersion = "v2.0.0-alpha.10"
     def nodSourceCache = "${projectDir}/build/nodtool-src-cache"
-    def publishDir = "${projectDir}/src/main/assets/nodtool"
+    def jniLibsDir = "${projectDir}/src/main/jniLibs/arm64-v8a"
     def ndkHome = System.getenv("ANDROID_NDK_HOME") ?: (android.ndkDirectory?.absolutePath ?: "")
 
-    outputs.dir(publishDir)
+    outputs.file("${jniLibsDir}/libnodtool.so")
 
     environment "ANDROID_NDK_HOME", ndkHome
 
@@ -231,8 +298,9 @@ tasks.register("bundleNodtool", Exec) {
             echo "ANDROID_NDK_HOME is not set and android.ndkDirectory could not resolve one - cannot cross-compile nodtool." >&2
             exit 1
         fi
-        marker="${publishDir}/.nodtool-version"
-        if [ -f "\$marker" ] && [ "\$(cat "\$marker")" = "${nodtoolVersion}" ] && [ -x "${publishDir}/nodtool" ]; then
+        mkdir -p "${jniLibsDir}"
+        marker="${jniLibsDir}/.nodtool-version"
+        if [ -f "\$marker" ] && [ "\$(cat "\$marker")" = "${nodtoolVersion}" ] && [ -x "${jniLibsDir}/libnodtool.so" ]; then
             echo "nodtool ${nodtoolVersion} already built and staged, skipping."
             exit 0
         fi
@@ -242,9 +310,8 @@ tasks.register("bundleNodtool", Exec) {
         fi
         cd "${nodSourceCache}"
         cargo ndk -t arm64-v8a build --release -p nodtool
-        mkdir -p "${publishDir}"
-        cp "${nodSourceCache}/target/aarch64-linux-android/release/nodtool" "${publishDir}/nodtool"
-        chmod +x "${publishDir}/nodtool"
+        cp "${nodSourceCache}/target/aarch64-linux-android/release/nodtool" "${jniLibsDir}/libnodtool.so"
+        chmod +x "${jniLibsDir}/libnodtool.so"
         echo "${nodtoolVersion}" > "\$marker"
     """
 }
